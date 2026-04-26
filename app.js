@@ -236,14 +236,14 @@ function money(value) {
 
 function loadCart() {
   try {
-    return JSON.parse(localStorage.getItem("mono-cart")) || [];
+    return JSON.parse(localStorage.getItem("cosmic-cart")) || [];
   } catch {
     return [];
   }
 }
 
 function saveCart() {
-  localStorage.setItem("mono-cart", JSON.stringify(cart));
+  localStorage.setItem("cosmic-cart", JSON.stringify(cart));
   renderCart();
 }
 
@@ -362,12 +362,36 @@ function renderHome() {
     <div class="page">
       <section class="hero">
         <div class="hero__content reveal">
-          <p class="eyebrow">Online fashion department</p>
-          <h1>COSMIC DEPT</h1>
-          <p>Street-ready clothing, fragrances, and bags with a dark premium storefront inspired by your saved reference.</p>
-          <div class="button-row">
-            <a class="button button--dark" href="#shop?category=Men">Shop Men</a>
-            <a class="button button--ghost-light" href="#shop?category=Women">Shop Women</a>
+          <div>
+            <p class="eyebrow">Online fashion department</p>
+            <h1>COSMIC DEPT</h1>
+            <p>Street-ready clothing, fragrances, and bags shaped around a dark premium department-store interface.</p>
+            <div class="button-row">
+              <a class="button button--dark" href="#shop?category=Men">Shop Men</a>
+              <a class="button button--ghost-light" href="#shop?category=Women">Shop Women</a>
+            </div>
+          </div>
+          <div class="hero__preview" aria-hidden="true">
+            <div class="dept-shell">
+              <div class="dept-topbar">
+                <span class="dept-logo">COSMIC DEPT</span>
+                <div class="dept-icons"><span></span><span></span><span></span></div>
+              </div>
+              <div class="dept-banner">
+                <strong>Accessorize your look</strong>
+                <span>New drops across clothing, perfumes, and bags</span>
+              </div>
+              <div class="dept-grid">
+                <div class="dept-card"><span>Latest</span><b>Men</b></div>
+                <div class="dept-card"><span>Trending</span><b>Women</b></div>
+                <div class="dept-card"><span>Signature</span><b>Perfumes</b></div>
+                <div class="dept-card"><span>Carry</span><b>Bags</b></div>
+              </div>
+              <div class="dept-feed">
+                <p>Orders, arrivals, and WhatsApp checkout</p>
+                <div></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -619,14 +643,14 @@ function renderContact() {
           <a class="contact-link" href="https://wa.me/${WHATSAPP_NUMBER}" target="_blank" rel="noreferrer">
             <span>WhatsApp</span><strong>+27 00 000 0000</strong>
           </a>
-          <a class="contact-link" href="mailto:hello@monoatelier.example">
-            <span>Email</span><strong>hello@monoatelier.example</strong>
+          <a class="contact-link" href="mailto:hello@cosmicdept.example">
+            <span>Email</span><strong>hello@cosmicdept.example</strong>
           </a>
           <a class="contact-link" href="#" aria-label="Instagram placeholder">
-            <span>Instagram</span><strong>@monoatelier</strong>
+            <span>Instagram</span><strong>@cosmicdept</strong>
           </a>
           <a class="contact-link" href="#" aria-label="TikTok placeholder">
-            <span>TikTok</span><strong>@monoatelier</strong>
+            <span>TikTok</span><strong>@cosmicdept</strong>
           </a>
         </div>
       </div>
