@@ -362,9 +362,9 @@ function renderHome() {
     <div class="page">
       <section class="hero">
         <div class="hero__content reveal">
-          <p class="eyebrow">Spring edit 2026</p>
-          <h1>MONO ATELIER</h1>
-          <p>Minimal essentials, polished silhouettes, signature fragrances, and elevated bags for modern wardrobes.</p>
+          <p class="eyebrow">Online fashion department</p>
+          <h1>COSMIC DEPT</h1>
+          <p>Street-ready clothing, fragrances, and bags with a dark premium storefront inspired by your saved reference.</p>
           <div class="button-row">
             <a class="button button--dark" href="#shop?category=Men">Shop Men</a>
             <a class="button button--ghost-light" href="#shop?category=Women">Shop Women</a>
@@ -404,8 +404,8 @@ function renderHome() {
 
       <section class="promo-band">
         <div class="container promo-band__inner reveal">
-          <h2>New season essentials.</h2>
-          <p>Shop clean tailoring, soft textures, compact bags, and fragrances made for everyday rotation.</p>
+          <h2>Cosmic essentials.</h2>
+          <p>Shop clean tailoring, streetwear layers, compact bags, and fragrances made for everyday rotation.</p>
         </div>
       </section>
 
@@ -597,7 +597,7 @@ function renderAbout() {
         <p class="eyebrow">About</p>
         <h1>Minimal pieces for modern movement.</h1>
         <p>
-          MONO ATELIER is a contemporary fashion concept for men and women who want clean wardrobe
+          COSMIC DEPT is a contemporary fashion concept for men and women who want clean wardrobe
           staples, expressive accessories, and signature scents without visual noise. The brand
           focuses on neutral palettes, refined textures, and pieces that move easily from weekday
           routines to nights out.

@@ -4,8 +4,8 @@
   --ink: #111111;
   --muted: #6f6f6f;
   --line: #dedbd6;
-  --accent: #b08d57;
-  --accent-dark: #7d623a;
+  --accent: #d84dff;
+  --accent-dark: #9f28d6;
   --shadow: 0 24px 80px rgba(17, 17, 17, 0.12);
   --radius: 8px;
   --header-height: 68px;
@@ -211,8 +211,9 @@ img {
   align-items: end;
   padding: 0 0 28px;
   background:
-    linear-gradient(180deg, rgba(17, 17, 17, 0.08), rgba(17, 17, 17, 0.62)),
-    url("https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1800&q=80") center 28% / cover;
+    radial-gradient(circle at 72% 18%, rgba(216, 77, 255, 0.34), transparent 34%),
+    linear-gradient(90deg, rgba(6, 5, 11, 0.94), rgba(22, 8, 35, 0.78) 48%, rgba(6, 5, 11, 0.48)),
+    url("assets/store-reference.jpeg") center 34% / cover;
   color: #fff;
 }
 
@@ -228,6 +229,7 @@ img {
   font-size: clamp(3.3rem, 15vw, 8.8rem);
   line-height: 0.84;
   letter-spacing: 0;
+  text-shadow: 0 18px 50px rgba(0, 0, 0, 0.48);
 }
 
 .hero p {
