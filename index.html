@@ -35,22 +35,77 @@
 
     <main id="app" tabindex="-1"></main>
 
-    <aside class="cart-panel" data-cart-panel aria-label="Shopping cart" aria-hidden="true">
+    <aside class="cart-panel" data-cart-panel aria-label="Shopping cart and checkout" aria-hidden="true">
       <div class="cart-panel__header">
         <div>
-          <p class="eyebrow">Your Selection</p>
-          <h2>Cart</h2>
+          <p class="eyebrow">Cart -> Details -> Payment -> Confirm</p>
+          <h2>Checkout</h2>
         </div>
         <button class="icon-button" data-cart-close aria-label="Close cart">x</button>
       </div>
-      <div class="cart-items" data-cart-items></div>
+      <div class="cart-panel__body">
+        <section class="checkout-section">
+          <div class="checkout-section__heading">
+            <span>01</span>
+            <h3>Cart</h3>
+          </div>
+          <div class="cart-items" data-cart-items></div>
+        </section>
+
+        <section class="checkout-section">
+          <div class="checkout-section__heading">
+            <span>02</span>
+            <h3>Customer Details</h3>
+          </div>
+          <form class="checkout-form" data-checkout-form>
+            <label>
+              Full name
+              <input type="text" name="fullName" placeholder="Your full name" autocomplete="name" required />
+            </label>
+            <label>
+              Phone number
+              <input type="tel" name="phone" placeholder="+260..." autocomplete="tel" required />
+            </label>
+            <label>
+              Delivery location
+              <textarea name="location" placeholder="Area, city, landmark or delivery notes" rows="3" required></textarea>
+            </label>
+          </form>
+        </section>
+
+        <section class="checkout-section">
+          <div class="checkout-section__heading">
+            <span>03</span>
+            <h3>Payment Method</h3>
+          </div>
+          <div class="payment-grid" data-payment-methods>
+            <button class="payment-card is-active" type="button" data-payment="MTN Mobile Money">
+              <strong>MTN Mobile Money</strong>
+              <span>Manual payment</span>
+            </button>
+            <button class="payment-card" type="button" data-payment="Airtel Money">
+              <strong>Airtel Money</strong>
+              <span>Manual payment</span>
+            </button>
+            <button class="payment-card" type="button" data-payment="Zamtel Money">
+              <strong>Zamtel Money</strong>
+              <span>Manual payment</span>
+            </button>
+            <button class="payment-card payment-card--soon" type="button" data-payment="Card Payment - Phase 2">
+              <strong>Card Payment</strong>
+              <span>Phase 2: Stripe, Paystack, Flutterwave, DPO Group</span>
+            </button>
+          </div>
+          <div class="payment-instructions" data-payment-instructions></div>
+        </section>
+      </div>
       <div class="cart-panel__footer">
-        <p class="cart-note">Checkout opens WhatsApp with your item summary ready to send.</p>
+        <p class="cart-note">Confirming opens WhatsApp with your order, customer details, payment method, and reference number ready to send.</p>
         <div class="cart-total">
           <span>Total</span>
           <strong data-cart-total>R0</strong>
         </div>
-        <button class="button button--dark button--full" data-checkout>Checkout via WhatsApp</button>
+        <button class="button button--dark button--full" data-checkout>Confirm Order on WhatsApp</button>
       </div>
     </aside>
     <div class="overlay" data-overlay></div>

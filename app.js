@@ -1,4 +1,39 @@
 const WHATSAPP_NUMBER = "260764018773";
+const BUSINESS_PAYMENT_NUMBER = "+260 000 000 000";
+const paymentInstructions = {
+  "MTN Mobile Money": {
+    title: "MTN Mobile Money",
+    steps: [
+      "Send the total amount to the business payment number.",
+      "Use your order reference as the payment reference.",
+      "Send proof of payment on WhatsApp after confirmation.",
+    ],
+  },
+  "Airtel Money": {
+    title: "Airtel Money",
+    steps: [
+      "Send the total amount to the business payment number.",
+      "Use your order reference as the payment reference.",
+      "Send proof of payment on WhatsApp after confirmation.",
+    ],
+  },
+  "Zamtel Money": {
+    title: "Zamtel Money",
+    steps: [
+      "Send the total amount to the business payment number.",
+      "Use your order reference as the payment reference.",
+      "Send proof of payment on WhatsApp after confirmation.",
+    ],
+  },
+  "Card Payment - Phase 2": {
+    title: "Card Payment",
+    steps: [
+      "Card checkout is planned for Phase 2.",
+      "Future gateways can include Stripe, Paystack, Flutterwave, or DPO Group.",
+      "Do not enter or send card details in this prototype.",
+    ],
+  },
+};
 
 const products = [
   {
@@ -233,6 +268,7 @@ const formatter = new Intl.NumberFormat("en-ZA", {
 
 let cart = loadCart();
 let selectedSize = "";
+let selectedPaymentMethod = "MTN Mobile Money";
 
 function money(value) {
   return formatter.format(value);
@@ -249,6 +285,10 @@ function loadCart() {
 function saveCart() {
   localStorage.setItem("cosmic-cart", JSON.stringify(cart));
   renderCart();
+}
+
+function generateOrderReference() {
+  return `COSMIC-${Date.now()}`;
 }
 
 function getProduct(id) {
@@ -299,6 +339,7 @@ function cartTotal() {
 function openCart() {
   body.classList.add("cart-open");
   cartPanel.setAttribute("aria-hidden", "false");
+  renderPaymentInstructions();
 }
 
 function closeCart() {
@@ -340,6 +381,39 @@ function renderCart() {
       `;
     })
     .join("");
+}
+
+function getCheckoutDetails() {
+  const form = document.querySelector("[data-checkout-form]");
+  const data = new FormData(form);
+  return {
+    fullName: String(data.get("fullName") || "").trim(),
+    phone: String(data.get("phone") || "").trim(),
+    location: String(data.get("location") || "").trim(),
+  };
+}
+
+function renderPaymentInstructions(reference = "Generated when you confirm") {
+  const container = document.querySelector("[data-payment-instructions]");
+  if (!container) return;
+
+  const instruction = paymentInstructions[selectedPaymentMethod];
+  const isCard = selectedPaymentMethod === "Card Payment - Phase 2";
+  container.innerHTML = `
+    <p class="eyebrow">${isCard ? "Coming soon" : "Manual payment"}</p>
+    <h4>${instruction.title}</h4>
+    <div class="payment-meta">
+      <span>Business number</span>
+      <strong>${isCard ? "Gateway integration pending" : BUSINESS_PAYMENT_NUMBER}</strong>
+    </div>
+    <div class="payment-meta">
+      <span>Order reference</span>
+      <strong>${reference}</strong>
+    </div>
+    <ol>
+      ${instruction.steps.map((step) => `<li>${step}</li>`).join("")}
+    </ol>
+  `;
 }
 
 function productCard(product) {
@@ -623,7 +697,7 @@ function renderProductPage(id) {
           }
           <div class="button-row">
             <button class="button button--dark" data-add-product="${product.id}">Add to Cart</button>
-            <a class="button" data-order-product href="#">Order via WhatsApp</a>
+            <button class="button" data-order-product="${product.id}">Order via WhatsApp</button>
           </div>
         </div>
       </div>
@@ -643,23 +717,12 @@ function renderProductPage(id) {
       selectedSize = button.dataset.sizeOption;
       document.querySelectorAll("[data-size-option]").forEach((sizeButton) => sizeButton.classList.remove("is-active"));
       button.classList.add("is-active");
-      updateProductWhatsAppLink(product);
     });
   });
 
   document.querySelector("[data-add-product]").addEventListener("click", () => addToCart(product.id, selectedSize));
-  updateProductWhatsAppLink(product);
+  document.querySelector("[data-order-product]").addEventListener("click", () => addToCart(product.id, selectedSize));
   revealOnScroll();
-}
-
-function updateProductWhatsAppLink(product) {
-  const link = document.querySelector("[data-order-product]");
-  if (!link) return;
-
-  const message = `Hello, I'd like to order:\n- ${product.name}${selectedSize ? `, Size ${selectedSize}` : ""} (x1)\nTotal: ${money(product.price)}`;
-  link.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
-  link.target = "_blank";
-  link.rel = "noreferrer";
 }
 
 function renderAbout() {
@@ -710,6 +773,12 @@ function renderContact() {
 function checkoutWhatsApp() {
   if (!cart.length) return;
 
+  const form = document.querySelector("[data-checkout-form]");
+  if (!form.reportValidity()) return;
+
+  const details = getCheckoutDetails();
+  const reference = generateOrderReference();
+
   const lines = cart
     .map((item) => {
       const product = getProduct(item.id);
@@ -718,7 +787,25 @@ function checkoutWhatsApp() {
     })
     .filter(Boolean);
 
-  const message = `Hello, I'd like to order:\n${lines.join("\n")}\nTotal: ${money(cartTotal())}`;
+  renderPaymentInstructions(reference);
+
+  const paymentNote =
+    selectedPaymentMethod === "Card Payment - Phase 2"
+      ? "Card payment selected for Phase 2. Please confirm an available payment option on WhatsApp."
+      : `I will pay via ${selectedPaymentMethod} to ${BUSINESS_PAYMENT_NUMBER} and send proof of payment on WhatsApp.`;
+
+  const message = `Hello, I'd like to order:
+Order reference: ${reference}
+Name: ${details.fullName}
+Phone: ${details.phone}
+Delivery location: ${details.location}
+
+Items:
+${lines.join("\n")}
+
+Total: ${money(cartTotal())}
+Payment method: ${selectedPaymentMethod}
+Payment note: ${paymentNote}`;
   window.location.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
 
@@ -776,9 +863,18 @@ document.addEventListener("click", (event) => {
   if (plus) updateQuantity(plus.dataset.qtyPlus, plus.dataset.size, 1);
   if (minus) updateQuantity(minus.dataset.qtyMinus, minus.dataset.size, -1);
   if (remove) removeFromCart(remove.dataset.remove, remove.dataset.size);
+
+  const payment = event.target.closest("[data-payment]");
+  if (payment) {
+    selectedPaymentMethod = payment.dataset.payment;
+    document.querySelectorAll("[data-payment]").forEach((button) => button.classList.remove("is-active"));
+    payment.classList.add("is-active");
+    renderPaymentInstructions();
+  }
 });
 
 window.addEventListener("hashchange", route);
 
 renderCart();
+renderPaymentInstructions();
 route();
