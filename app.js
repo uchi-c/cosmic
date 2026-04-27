@@ -1,4 +1,4 @@
-const WHATSAPP_NUMBER = "27000000000";
+const WHATSAPP_NUMBER = "260764018773";
 
 const products = [
   {
@@ -407,7 +407,7 @@ function renderHome() {
         </div>
       </section>
 
-      <section class="section">
+      <section class="section" id="categories">
         <div class="container">
           <div class="section-heading">
             <div>
@@ -656,7 +656,7 @@ function updateProductWhatsAppLink(product) {
   const link = document.querySelector("[data-order-product]");
   if (!link) return;
 
-  const message = `Hi, I would like to order:\n- ${product.name}${selectedSize ? `, Size ${selectedSize}` : ""} x1\nTotal: ${money(product.price)}`;
+  const message = `Hello, I'd like to order:\n- ${product.name}${selectedSize ? `, Size ${selectedSize}` : ""} (x1)\nTotal: ${money(product.price)}`;
   link.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
   link.target = "_blank";
   link.rel = "noreferrer";
@@ -689,7 +689,7 @@ function renderContact() {
         <h1>Let us help with your order.</h1>
         <div class="contact-list">
           <a class="contact-link" href="https://wa.me/${WHATSAPP_NUMBER}" target="_blank" rel="noreferrer">
-            <span>WhatsApp</span><strong>+27 00 000 0000</strong>
+            <span>WhatsApp</span><strong>+260 764 018 773</strong>
           </a>
           <a class="contact-link" href="mailto:hello@cosmicdept.example">
             <span>Email</span><strong>hello@cosmicdept.example</strong>
@@ -714,11 +714,11 @@ function checkoutWhatsApp() {
     .map((item) => {
       const product = getProduct(item.id);
       if (!product) return "";
-      return `- ${product.name}${item.size ? `, Size ${item.size}` : ""} x${item.quantity}`;
+      return `- ${product.name}${item.size ? `, Size ${item.size}` : ""} (x${item.quantity})`;
     })
     .filter(Boolean);
 
-  const message = `Hi, I would like to place an order:\n${lines.join("\n")}\n\nTotal: ${money(cartTotal())}`;
+  const message = `Hello, I'd like to order:\n${lines.join("\n")}\nTotal: ${money(cartTotal())}`;
   window.location.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
 
@@ -747,12 +747,17 @@ function route() {
 
   if (path === "shop") renderShop();
   else if (path.startsWith("product/")) renderProductPage(path.split("/")[1]);
+  else if (path === "categories") renderHome();
   else if (path === "about") renderAbout();
   else if (path === "contact") renderContact();
   else renderHome();
 
   app.focus({ preventScroll: true });
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (path === "categories") {
+    document.querySelector("#categories")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 }
 
 navToggle.addEventListener("click", () => body.classList.toggle("nav-open"));
