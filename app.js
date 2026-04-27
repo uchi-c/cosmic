@@ -198,18 +198,22 @@ const products = [
 const categories = [
   {
     name: "Men",
+    summary: "Tailored layers, tees, trousers",
     image: "https://images.unsplash.com/photo-1492447166138-50c3889fccb1?auto=format&fit=crop&w=900&q=80",
   },
   {
     name: "Women",
+    summary: "Dresses, denim, sharp separates",
     image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=80",
   },
   {
     name: "Perfumes",
+    summary: "Signature scents for every day",
     image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=900&q=80",
   },
   {
     name: "Bags",
+    summary: "Compact carry and city totes",
     image: "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?auto=format&fit=crop&w=900&q=80",
   },
 ];
@@ -341,8 +345,10 @@ function renderCart() {
 function productCard(product) {
   const node = productTemplate.content.firstElementChild.cloneNode(true);
   const link = node.querySelector(".product-card__image-link");
+  const view = node.querySelector(".product-card__view");
   const image = node.querySelector("img");
   link.href = `#product/${product.id}`;
+  view.href = `#product/${product.id}`;
   image.src = product.images[0];
   image.alt = product.name;
   node.querySelector(".product-card__category").textContent = product.category;
@@ -365,10 +371,15 @@ function renderHome() {
           <div>
             <p class="eyebrow">Online fashion department</p>
             <h1>COSMIC DEPT</h1>
-            <p>Street-ready clothing, fragrances, and bags shaped around a dark premium department-store interface.</p>
+            <p>Modern essentials for men and women, curated across clothing, perfumes, and bags with a direct WhatsApp ordering flow.</p>
             <div class="button-row">
               <a class="button button--dark" href="#shop?category=Men">Shop Men</a>
               <a class="button button--ghost-light" href="#shop?category=Women">Shop Women</a>
+            </div>
+            <div class="hero-stats" aria-label="Store highlights">
+              <span><strong>12</strong> curated products</span>
+              <span><strong>4</strong> departments</span>
+              <span><strong>WA</strong> checkout</span>
             </div>
           </div>
           <div class="hero__preview" aria-hidden="true">
@@ -388,7 +399,7 @@ function renderHome() {
                 <div class="dept-card"><span>Carry</span><b>Bags</b></div>
               </div>
               <div class="dept-feed">
-                <p>Orders, arrivals, and WhatsApp checkout</p>
+                <p>Browse -> Select -> Order via WhatsApp</p>
                 <div></div>
               </div>
             </div>
@@ -399,17 +410,11 @@ function renderHome() {
       <section class="section">
         <div class="container">
           <div class="section-heading">
-            <h2>Featured</h2>
-            <a href="#shop">View all</a>
-          </div>
-          <div class="product-grid" data-featured></div>
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="container">
-          <div class="section-heading">
-            <h2>Categories</h2>
+            <div>
+              <p class="eyebrow">Departments</p>
+              <h2>Shop by category</h2>
+            </div>
+            <a href="#shop">Browse all</a>
           </div>
           <div class="category-grid">
             ${categories
@@ -417,7 +422,10 @@ function renderHome() {
                 (category) => `
                   <a class="category-card reveal" href="#shop?category=${category.name}">
                     <img src="${category.image}" alt="${category.name}" loading="lazy">
-                    <span>${category.name}</span>
+                    <span>
+                      <b>${category.name}</b>
+                      <small>${category.summary}</small>
+                    </span>
                   </a>
                 `,
               )
@@ -426,17 +434,44 @@ function renderHome() {
         </div>
       </section>
 
-      <section class="promo-band">
-        <div class="container promo-band__inner reveal">
-          <h2>Cosmic essentials.</h2>
-          <p>Shop clean tailoring, streetwear layers, compact bags, and fragrances made for everyday rotation.</p>
+      <section class="section section--tight">
+        <div class="container collection-strip reveal">
+          <div>
+            <p class="eyebrow">Simple journey</p>
+            <h2>Browse. Select. Order.</h2>
+          </div>
+          <p>Discover the edit, add your preferred sizes to cart, then send a complete order summary straight to WhatsApp.</p>
         </div>
       </section>
 
       <section class="section">
         <div class="container">
           <div class="section-heading">
-            <h2>New Arrivals</h2>
+            <div>
+              <p class="eyebrow">Editor picks</p>
+              <h2>Featured products</h2>
+            </div>
+            <a href="#shop">View all</a>
+          </div>
+          <div class="product-grid" data-featured></div>
+        </div>
+      </section>
+
+      <section class="promo-band">
+        <div class="container promo-band__inner reveal">
+          <h2>Cosmic essentials.</h2>
+          <p>Shop clean tailoring, streetwear layers, compact bags, and fragrances made for everyday rotation.</p>
+          <a class="button button--ghost-light" href="#shop">Shop the full edit</a>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Latest drop</p>
+              <h2>New arrivals</h2>
+            </div>
             <a href="#shop">Shop now</a>
           </div>
           <div class="product-grid" data-new-arrivals></div>
@@ -462,7 +497,10 @@ function renderShop() {
     <section class="page section">
       <div class="container">
         <div class="section-heading">
-          <h2>Shop</h2>
+          <div>
+            <p class="eyebrow">Full collection</p>
+            <h2>Shop</h2>
+          </div>
         </div>
         <div class="shop-layout">
           <form class="shop-tools" data-shop-tools>
@@ -490,6 +528,7 @@ function renderShop() {
             </div>
           </form>
           <div>
+            <div class="shop-summary" data-shop-summary></div>
             <div class="product-grid" data-shop-grid></div>
           </div>
         </div>
@@ -503,6 +542,7 @@ function renderShop() {
     min: document.querySelector("[data-min]"),
     max: document.querySelector("[data-max]"),
     grid: document.querySelector("[data-shop-grid]"),
+    summary: document.querySelector("[data-shop-summary]"),
   };
 
   function applyFilters() {
@@ -518,10 +558,12 @@ function renderShop() {
     });
 
     if (!filtered.length) {
+      controls.summary.textContent = "0 products found";
       controls.grid.innerHTML = '<p class="empty-state">No products match these filters.</p>';
       return;
     }
 
+    controls.summary.textContent = `${filtered.length} product${filtered.length === 1 ? "" : "s"} found`;
     renderProductGrid(filtered, controls.grid);
     revealOnScroll();
   }
@@ -555,10 +597,16 @@ function renderProductPage(id) {
         </div>
 
         <div class="detail-copy reveal">
+          <a class="back-link" href="#shop">Back to shop</a>
           <p class="eyebrow">${product.category}</p>
           <h1>${product.name}</h1>
           <strong class="price">${money(product.price)}</strong>
           <p>${product.description}</p>
+          <div class="product-benefits">
+            <span>Premium finish</span>
+            <span>WhatsApp ordering</span>
+            <span>Local cart saved</span>
+          </div>
           ${
             product.sizes.length
               ? `
