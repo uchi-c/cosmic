@@ -55,7 +55,29 @@ VITE_SUPABASE_URL=https://rxbbibzyyhyksqzlcnll.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_...
 ```
 
+## One-command deploy
+
+A helper reads the secrets from your environment (never stores them) and does
+the link + secrets + deploy in one go:
+
+```bash
+export STRIPE_SECRET_KEY=sk_test_your_own_key
+export STRIPE_WEBHOOK_SECRET=whsec_...        # after registering the webhook
+./supabase/deploy-functions.sh rxbbibzyyhyksqzlcnll
+```
+
+## Local testing (no deploy)
+
+```bash
+cp supabase/functions/.env.example supabase/functions/.env   # add your TEST keys
+supabase functions serve --env-file supabase/functions/.env
+# in another shell, forward Stripe events + get a signing secret:
+stripe listen --forward-to localhost:54321/functions/v1/stripe-webhook
+```
+
 ## Test
 
-Use a Stripe test key + card `4242 4242 4242 4242` first. Confirm the order
-flips to `paid` in the `orders` table after completing the hosted checkout.
+Use YOUR OWN Stripe **test** key + card `4242 4242 4242 4242`. The generic
+example key from Stripe's public docs is not tied to your account and will not
+create sessions for your store. Confirm the order flips to `paid` in the
+`orders` table after completing the hosted checkout.
