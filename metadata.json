@@ -1,0 +1,6 @@
+{
+  "name": "Cosmic Dept Admin",
+  "description": "Premium customer fashion storefront and production-grade retro admin panel for Cosmic Dept, featuring secure product, checkout, and transaction management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
