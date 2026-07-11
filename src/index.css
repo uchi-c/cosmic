@@ -1,0 +1,366 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Press+Start+2P&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=VT323&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-space-black: #0A0812;
+  --color-retro-surface: #120F1E;
+  --color-retro-border: #2A1F45;
+  --color-accent-purple: #9B6DFF;
+  --color-retro-gold: #B68D40;
+  --color-retro-green: #39FF14;
+  --color-retro-red: #FF4444;
+  --color-cream: #F8F3E9;
+  --color-cream-muted: rgba(248, 243, 233, 0.5);
+
+  --font-retro-heading: "Press Start 2P", system-ui, sans-serif;
+  --font-retro-mono: "VT323", monospace;
+  --font-body-mono: "Space Mono", monospace;
+  --font-serif: "VT323", monospace;
+  --font-sans: "Space Mono", monospace;
+}
+
+/* Base resets & styles matching the retro theme */
+body {
+  background-color: #0A0812;
+  color: #F8F3E9;
+  font-family: "Space Mono", monospace;
+}
+
+/* Custom variables for theme color-switching */
+:root {
+  --theme-accent: #9B6DFF;
+  --theme-accent-hover: rgba(155, 109, 255, 0.85);
+  --theme-accent-rgb: 155, 109, 255;
+}
+
+.theme-mens {
+  --theme-accent: #39FF14;
+  --theme-accent-hover: rgba(57, 255, 20, 0.85);
+  --theme-accent-rgb: 57, 255, 20;
+}
+
+.theme-womens {
+  --theme-accent: #FF44AF;
+  --theme-accent-hover: rgba(255, 68, 175, 0.85);
+  --theme-accent-rgb: 255, 68, 175;
+}
+
+.theme-gym {
+  --theme-accent: #00FFFF;
+  --theme-accent-hover: rgba(0, 255, 255, 0.85);
+  --theme-accent-rgb: 0, 255, 255;
+}
+
+.theme-jewelry {
+  --theme-accent: #B68D40;
+  --theme-accent-hover: rgba(182, 141, 64, 0.85);
+  --theme-accent-rgb: 182, 141, 64;
+}
+
+.theme-accessories {
+  --theme-accent: #FF9F00;
+  --theme-accent-hover: rgba(255, 159, 0, 0.85);
+  --theme-accent-rgb: 255, 159, 0;
+}
+
+.theme-all {
+  --theme-accent: #9B6DFF;
+  --theme-accent-hover: rgba(155, 109, 255, 0.85);
+  --theme-accent-rgb: 155, 109, 255;
+}
+
+/* Force headings to use the Press Start 2P font inside the storefront portal */
+.storefront-portal h1,
+.storefront-portal h2,
+.storefront-portal h3,
+.storefront-portal h4 {
+  font-family: "Press Start 2P", system-ui, sans-serif !important;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.5 !important;
+}
+
+/* Responsive scale optimization for Press Start 2P because it is extremely wide */
+.storefront-portal h1 {
+  font-size: 0.95rem !important;
+}
+.storefront-portal h2 {
+  font-size: 1.1rem !important;
+}
+.storefront-portal h3 {
+  font-size: 0.75rem !important;
+}
+.storefront-portal h4 {
+  font-size: 0.65rem !important;
+}
+
+@media (min-width: 640px) {
+  .storefront-portal h1 {
+    font-size: 1.15rem !important;
+  }
+  .storefront-portal h2 {
+    font-size: 1.35rem !important;
+  }
+  .storefront-portal h3 {
+    font-size: 0.9rem !important;
+  }
+  .storefront-portal h4 {
+    font-size: 0.7rem !important;
+  }
+}
+
+/* Dynamic color replacements for storefront elements using #9B6DFF */
+.storefront-portal .bg-\[\#9B6DFF\],
+.storefront-portal .bg-\[\#9B6DFF\]\/10,
+.storefront-portal .bg-\[\#9B6DFF\]\/5 {
+  background-color: var(--theme-accent) !important;
+}
+.storefront-portal .bg-\[\#9B6DFF\]\/10 {
+  background-color: rgba(var(--theme-accent-rgb), 0.1) !important;
+}
+.storefront-portal .bg-\[\#9B6DFF\]\/5 {
+  background-color: rgba(var(--theme-accent-rgb), 0.05) !important;
+}
+
+.storefront-portal .hover\:bg-\[\#9B6DFF\]:hover,
+.storefront-portal .hover\:bg-\[\#9B6DFF\]\/85:hover,
+.storefront-portal .hover\:bg-\[\#9B6DFF\]\/10:hover {
+  background-color: var(--theme-accent) !important;
+}
+.storefront-portal .hover\:bg-\[\#9B6DFF\]\/85:hover {
+  background-color: var(--theme-accent-hover) !important;
+}
+.storefront-portal .hover\:bg-\[\#9B6DFF\]\/10:hover {
+  background-color: rgba(var(--theme-accent-rgb), 0.1) !important;
+}
+
+.storefront-portal .text-\[\#9B6DFF\],
+.storefront-portal .hover\:text-\[\#9B6DFF\]:hover,
+.storefront-portal .group:hover .group-hover\:text-\[\#9B6DFF\],
+.storefront-portal .group-hover\:text-\[\#9B6DFF\] {
+  color: var(--theme-accent) !important;
+}
+
+.storefront-portal .border-\[\#9B6DFF\],
+.storefront-portal .border-l-\[\#9B6DFF\],
+.storefront-portal .hover\:border-\[\#9B6DFF\]:hover,
+.storefront-portal .focus\:border-\[\#9B6DFF\]:focus {
+  border-color: var(--theme-accent) !important;
+}
+
+/* Product card subtle lift and glow on hover */
+.product-card-lift-glow {
+  transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.3s ease, box-shadow 0.35s ease !important;
+}
+
+.product-card-lift-glow:hover {
+  transform: translateY(-6px);
+  border-color: var(--theme-accent) !important;
+  box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.85), 0 0 16px rgba(var(--theme-accent-rgb), 0.42) !important;
+}
+
+/* Retro skeleton animation with theme colors */
+@keyframes retroPulseGlow {
+  0%, 100% {
+    opacity: 0.7;
+    border-color: #2A1F45;
+    box-shadow: 0 0 4px rgba(var(--theme-accent-rgb), 0.05);
+  }
+  50% {
+    opacity: 1.0;
+    border-color: var(--theme-accent) !important;
+    box-shadow: 0 0 14px rgba(var(--theme-accent-rgb), 0.25);
+  }
+}
+
+.animate-retro-pulse-glow {
+  animation: retroPulseGlow 1.8s infinite ease-in-out;
+}
+
+@keyframes skeletonScan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.skeleton-scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--theme-accent), transparent);
+  opacity: 0.65;
+  animation: skeletonScan 2.4s infinite linear;
+}
+
+/* Override selection bg and shadows dynamically */
+.storefront-portal .selection\:bg-\[\#9B6DFF\]::selection {
+  background-color: var(--theme-accent) !important;
+  color: #0A0812 !important;
+}
+
+.storefront-portal .shadow-\[0_0_15px_rgba\(155\,109\,255\,0\.3\)\] {
+  box-shadow: 0 0 15px rgba(var(--theme-accent-rgb), 0.3) !important;
+}
+
+.storefront-portal .shadow-\[0_0_20px_rgba\(155\,109\,255\,0\.4\)\] {
+  box-shadow: 0 0 20px rgba(var(--theme-accent-rgb), 0.4) !important;
+}
+
+.storefront-portal .shadow-\[0_0_6px_\#9B6DFF\] {
+  box-shadow: 0 0 6px var(--theme-accent) !important;
+}
+
+/* Dynamic color replacement for specific categories text (e.g. category filter counts or items) */
+.storefront-portal .text-\[\#39FF14\] {
+  color: var(--theme-accent) !important;
+}
+
+/* Apply VT323 specifically to pricing and data summaries */
+.pricing-data, .order-summary, .data-heavy {
+  font-family: "VT323", monospace !important;
+  font-size: 1.25rem !important;
+  letter-spacing: 0.05em;
+}
+
+/* Custom retro scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0812;
+}
+::-webkit-scrollbar-thumb {
+  background: #2A1F45;
+  border: 1px solid #9B6DFF;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9B6DFF;
+}
+
+/* Neon glow classes */
+.neon-glow-purple {
+  box-shadow: 0 0 8px rgba(155, 109, 255, 0.4);
+}
+.neon-glow-purple-focus:focus {
+  outline: none;
+  border-color: #9B6DFF;
+  box-shadow: 0 0 10px rgba(155, 109, 255, 0.6);
+}
+.neon-glow-green {
+  box-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+}
+.neon-glow-gold {
+  box-shadow: 0 0 8px rgba(182, 141, 64, 0.4);
+}
+.neon-border {
+  border: 2px solid #2A1F45;
+}
+.neon-border:hover, .neon-border-active {
+  border-color: #9B6DFF;
+}
+
+/* ============================================================
+   MOTION SYSTEM — keyframes referenced across the app.
+   (fadeIn / slideLeft / loaderBar were used app-wide but were
+   previously undefined, so those transitions silently no-op'd.)
+   ============================================================ */
+
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) both;
+}
+
+@keyframes slideLeft {
+  0% { transform: translateX(100%); opacity: 0.4; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+.animate-slideLeft {
+  animation: slideLeft 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Indeterminate boot loader sweep */
+@keyframes loaderBar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+.animate-loaderBar {
+  animation: loaderBar 1.1s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+/* ReactBits-style shimmer sweep for ShinyText */
+@keyframes shineSweep {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+.shiny-text {
+  background: linear-gradient(
+    110deg,
+    var(--shiny-base, rgba(248, 243, 233, 0.55)) 40%,
+    var(--shiny-highlight, #F8F3E9) 50%,
+    var(--shiny-base, rgba(248, 243, 233, 0.55)) 60%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shineSweep var(--shiny-speed, 4s) linear infinite;
+}
+
+/* Aurora drift for ambient gradient meshes */
+@keyframes auroraDrift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.55; }
+  50% { transform: translate3d(4%, -3%, 0) scale(1.12); opacity: 0.9; }
+}
+.animate-aurora {
+  animation: auroraDrift 12s ease-in-out infinite;
+}
+
+/* Gentle float for accent orbs / chips */
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-floatY {
+  animation: floatY 5s ease-in-out infinite;
+}
+
+/* Spotlight card: pointer-tracked radial glow layer */
+.spotlight-card {
+  position: relative;
+  isolation: isolate;
+}
+.spotlight-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    240px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    rgba(var(--theme-accent-rgb), 0.16),
+    transparent 65%
+  );
+}
+.spotlight-card:hover::before {
+  opacity: 1;
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .shiny-text,
+  .animate-aurora,
+  .animate-floatY,
+  .animate-loaderBar,
+  .animate-fadeIn,
+  .animate-slideLeft {
+    animation: none !important;
+  }
+}
+
