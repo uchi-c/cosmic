@@ -375,13 +375,21 @@ export const dbService = {
       // Track allocations so we can compensate (restore stock) if any later
       // step fails — the client can't run a real DB transaction, so we emulate
       // one with guarded writes + rollback.
-      const allocated: { id: string; restoreStock: number }[] = [];
+      const allocated: { id: string; qty: number; restoreStock: number }[] = [];
       const rollbackStock = async () => {
         for (const a of allocated) {
-          await supabase!
-            .from('products')
-            .update({ stock: a.restoreStock, updated_at: new Date().toISOString() })
-            .eq('id', a.id);
+          // Prefer the SECURITY DEFINER restore RPC (works under RLS); fall back
+          // to a direct write if the function isn't deployed.
+          const { error } = await supabase!.rpc('restore_product_stock', {
+            p_id: a.id,
+            p_qty: a.qty,
+          });
+          if (error) {
+            await supabase!
+              .from('products')
+              .update({ stock: a.restoreStock, updated_at: new Date().toISOString() })
+              .eq('id', a.id);
+          }
         }
       };
 
@@ -413,28 +421,45 @@ export const dbService = {
             color: item.color || '',
           });
 
-          // 3. Atomic guarded decrement.
-          //    The `.gte('stock', qty)` filter means the write only lands if the
-          //    row STILL holds enough stock at write time — so two concurrent
-          //    orders can't both claim the last unit and stock can never go
-          //    negative. Zero affected rows ⇒ it sold out mid-checkout.
-          //    (For fully transactional decrements under heavy contention, see
-          //    supabase/migrations/0001_atomic_stock.sql for the RPC approach.)
-          const { data: updatedRows, error: stockError } = await supabase
-            .from('products')
-            .update({ stock: dbProd.stock - item.quantity, updated_at: now })
-            .eq('id', dbProd.id)
-            .gte('stock', item.quantity)
-            .select('id');
+          // 3. Decrement inventory atomically.
+          //    Preferred path: the SECURITY DEFINER RPC from
+          //    supabase/migrations/0001_atomic_stock.sql — a single guarded
+          //    statement that is fully race-free and works under locked-down RLS.
+          //    Fallback: if that function isn't deployed yet, use a guarded
+          //    conditional UPDATE (.gte('stock', qty)) so we still never oversell
+          //    the last unit or drive stock negative.
+          const { error: rpcError } = await supabase.rpc('decrement_product_stock', {
+            p_id: dbProd.id,
+            p_qty: item.quantity,
+          });
 
-          if (stockError) {
-            throw new Error(`STOCK_UPDATE_EXCEPTION: Failed to allocate inventory: ${stockError.message}`);
-          }
-          if (!updatedRows || updatedRows.length === 0) {
-            throw new Error(`STOCK_EXCEPTION: "${dbProd.name}" sold out while your order was being processed. Please review your cargo bag and retry.`);
+          if (rpcError) {
+            const functionMissing =
+              rpcError.code === '42883' ||
+              /could not find the function|does not exist|schema cache/i.test(rpcError.message || '');
+
+            if (!functionMissing) {
+              // The RPC ran and rejected the allocation (e.g. INSUFFICIENT_STOCK).
+              throw new Error(`STOCK_EXCEPTION: "${dbProd.name}" is no longer available in the requested quantity.`);
+            }
+
+            // Fallback: guarded conditional update.
+            const { data: updatedRows, error: stockError } = await supabase
+              .from('products')
+              .update({ stock: dbProd.stock - item.quantity, updated_at: now })
+              .eq('id', dbProd.id)
+              .gte('stock', item.quantity)
+              .select('id');
+
+            if (stockError) {
+              throw new Error(`STOCK_UPDATE_EXCEPTION: Failed to allocate inventory: ${stockError.message}`);
+            }
+            if (!updatedRows || updatedRows.length === 0) {
+              throw new Error(`STOCK_EXCEPTION: "${dbProd.name}" sold out while your order was being processed. Please review your cargo bag and retry.`);
+            }
           }
 
-          allocated.push({ id: dbProd.id, restoreStock: dbProd.stock });
+          allocated.push({ id: dbProd.id, qty: item.quantity, restoreStock: dbProd.stock });
         }
 
         // 4. Force state fields
