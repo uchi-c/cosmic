@@ -8,6 +8,7 @@
  */
 
 export { Starfield } from './Starfield';
+export { Tilt3D } from './Tilt3D';
 export { ShinyText } from './ShinyText';
 export { CountUp } from './CountUp';
 export { SpotlightCard } from './SpotlightCard';

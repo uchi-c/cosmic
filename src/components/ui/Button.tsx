@@ -19,8 +19,10 @@ export const Button: React.FC<ButtonProps> = ({
   type = 'button',
   ...props
 }) => {
-  // Base retro theme styles: flat corners, monospace, sharp borders
-  let baseStyle = 'inline-flex items-center justify-center font-body-mono uppercase tracking-wider transition-all duration-200 select-none cursor-pointer border-2 active:translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none disabled:translate-y-0';
+  // Base retro theme styles: flat corners, monospace, sharp borders, animated
+  // sheen sweep + subtle hover lift (tactile press + focus-visible handled
+  // globally for every <button> in index.css).
+  let baseStyle = 'btn-sheen relative inline-flex items-center justify-center font-body-mono uppercase tracking-wider transition-all duration-200 select-none cursor-pointer border-2 hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none disabled:translate-y-0 disabled:hover:translate-y-0';
 
   // Variant mappings
   const variantStyles = {

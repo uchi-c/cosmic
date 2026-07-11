@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
-import { CountUp } from '../ui/reactbits';
+import { CountUp, Tilt3D } from '../ui/reactbits';
 
 interface StatsCardProps {
   title: string;
@@ -61,8 +61,11 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   const scheme = colorClasses[color];
 
   return (
-    <div
-      className={`bg-retro-surface border-2 p-5 transition-all duration-200 flex items-start gap-4 select-none ${scheme.border} ${scheme.glow}`}
+    <Tilt3D
+      max={10}
+      scale={1.03}
+      wrapperClassName="h-full"
+      className={`h-full bg-retro-surface border-2 p-5 transition-all duration-200 flex items-start gap-4 select-none ${scheme.border} ${scheme.glow}`}
     >
       {/* Icon frame */}
       <div className={`p-3 border-2 ${scheme.iconBg}`}>
@@ -74,7 +77,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
         <p className="text-[10px] text-cream-muted uppercase tracking-widest font-body-mono font-bold">
           {title}
         </p>
-        <p className={`font-retro-heading text-xl md:text-2xl mt-1 tracking-tight truncate leading-none py-1 ${scheme.valueText}`}>
+        <p className={`font-retro-heading text-lg md:text-xl mt-1 tracking-tight leading-none py-1 tabular-nums whitespace-nowrap ${scheme.valueText}`}>
           {countUp && typeof value === 'number' ? (
             <CountUp
               value={value}
@@ -90,7 +93,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
           {subtext}
         </p>
       </div>
-    </div>
+    </Tilt3D>
   );
 };
 export default StatsCard;
