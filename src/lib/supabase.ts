@@ -372,72 +372,104 @@ export const dbService = {
         throw new Error(`DATABASE_EXCEPTION: Failed to verify product catalog: ${fetchError?.message}`);
       }
 
-      // 2. Validate products, stocks and build secure order items
-      for (const item of orderPayload.items) {
-        const dbProd = dbProducts.find(p => p.id === item.id);
-        if (!dbProd) {
-          throw new Error(`SECURITY_EXCEPTION: Product with ID ${item.id} is unrecognized or inactive.`);
+      // Track allocations so we can compensate (restore stock) if any later
+      // step fails — the client can't run a real DB transaction, so we emulate
+      // one with guarded writes + rollback.
+      const allocated: { id: string; restoreStock: number }[] = [];
+      const rollbackStock = async () => {
+        for (const a of allocated) {
+          await supabase!
+            .from('products')
+            .update({ stock: a.restoreStock, updated_at: new Date().toISOString() })
+            .eq('id', a.id);
         }
-        if (!dbProd.is_active) {
-          throw new Error(`SECURITY_EXCEPTION: Product "${dbProd.name}" is no longer active.`);
-        }
-        if (dbProd.stock < item.quantity) {
-          throw new Error(`STOCK_EXCEPTION: Insufficient inventory stock for product "${dbProd.name}". Available: ${dbProd.stock}.`);
-        }
-
-        const price = dbProd.sale_price !== null && dbProd.sale_price !== undefined ? dbProd.sale_price : dbProd.price;
-        const itemTotal = price * item.quantity;
-        calculatedSubtotal += itemTotal;
-
-        verifiedItems.push({
-          id: dbProd.id,
-          name: dbProd.name,
-          price: price,
-          quantity: item.quantity,
-          image: dbProd.images?.[0] || '',
-          size: item.size || 'OS',
-          color: item.color || '',
-        });
-
-        // 3. Decrement inventory stock count in database securely
-        const { error: stockError } = await supabase
-          .from('products')
-          .update({ stock: dbProd.stock - item.quantity, updated_at: now })
-          .eq('id', dbProd.id);
-
-        if (stockError) {
-          throw new Error(`STOCK_UPDATE_EXCEPTION: Failed to allocate inventory: ${stockError.message}`);
-        }
-      }
-
-      // 4. Force state fields
-      const newOrder: Order = {
-        id: orderId,
-        customer_name: orderPayload.customer_name,
-        customer_email: orderPayload.customer_email,
-        customer_phone: orderPayload.customer_phone,
-        country: orderPayload.country,
-        address: orderPayload.address,
-        items: verifiedItems,
-        subtotal: calculatedSubtotal,
-        total: calculatedSubtotal, // free shipping
-        currency: 'USD',
-        payment_method: orderPayload.payment_method,
-        payment_status: 'pending', // Force pending on creation
-        order_status: 'pending',   // Force pending on creation
-        stripe_session: null,      // No client faked session allowed on creation
-        notes: orderPayload.notes || null,
-        created_at: now,
       };
 
-      const { data, error: insertError } = await supabase
-        .from('orders')
-        .insert([newOrder])
-        .select()
-        .single();
+      try {
+        // 2. Validate products, stocks and build secure order items
+        for (const item of orderPayload.items) {
+          const dbProd = dbProducts.find(p => p.id === item.id);
+          if (!dbProd) {
+            throw new Error(`SECURITY_EXCEPTION: Product with ID ${item.id} is unrecognized or inactive.`);
+          }
+          if (!dbProd.is_active) {
+            throw new Error(`SECURITY_EXCEPTION: Product "${dbProd.name}" is no longer active.`);
+          }
+          if (dbProd.stock < item.quantity) {
+            throw new Error(`STOCK_EXCEPTION: Insufficient inventory stock for product "${dbProd.name}". Available: ${dbProd.stock}.`);
+          }
 
-      if (insertError) throw insertError;
-      return data;
+          const price = dbProd.sale_price !== null && dbProd.sale_price !== undefined ? dbProd.sale_price : dbProd.price;
+          const itemTotal = price * item.quantity;
+          calculatedSubtotal += itemTotal;
+
+          verifiedItems.push({
+            id: dbProd.id,
+            name: dbProd.name,
+            price: price,
+            quantity: item.quantity,
+            image: dbProd.images?.[0] || '',
+            size: item.size || 'OS',
+            color: item.color || '',
+          });
+
+          // 3. Atomic guarded decrement.
+          //    The `.gte('stock', qty)` filter means the write only lands if the
+          //    row STILL holds enough stock at write time — so two concurrent
+          //    orders can't both claim the last unit and stock can never go
+          //    negative. Zero affected rows ⇒ it sold out mid-checkout.
+          //    (For fully transactional decrements under heavy contention, see
+          //    supabase/migrations/0001_atomic_stock.sql for the RPC approach.)
+          const { data: updatedRows, error: stockError } = await supabase
+            .from('products')
+            .update({ stock: dbProd.stock - item.quantity, updated_at: now })
+            .eq('id', dbProd.id)
+            .gte('stock', item.quantity)
+            .select('id');
+
+          if (stockError) {
+            throw new Error(`STOCK_UPDATE_EXCEPTION: Failed to allocate inventory: ${stockError.message}`);
+          }
+          if (!updatedRows || updatedRows.length === 0) {
+            throw new Error(`STOCK_EXCEPTION: "${dbProd.name}" sold out while your order was being processed. Please review your cargo bag and retry.`);
+          }
+
+          allocated.push({ id: dbProd.id, restoreStock: dbProd.stock });
+        }
+
+        // 4. Force state fields
+        const newOrder: Order = {
+          id: orderId,
+          customer_name: orderPayload.customer_name,
+          customer_email: orderPayload.customer_email,
+          customer_phone: orderPayload.customer_phone,
+          country: orderPayload.country,
+          address: orderPayload.address,
+          items: verifiedItems,
+          subtotal: calculatedSubtotal,
+          total: calculatedSubtotal, // free shipping
+          currency: 'USD',
+          payment_method: orderPayload.payment_method,
+          payment_status: 'pending', // Force pending on creation
+          order_status: 'pending',   // Force pending on creation
+          stripe_session: null,      // No client faked session allowed on creation
+          notes: orderPayload.notes || null,
+          created_at: now,
+        };
+
+        const { data, error: insertError } = await supabase
+          .from('orders')
+          .insert([newOrder])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        return data;
+      } catch (err) {
+        // Any failure after we started allocating stock: give it back.
+        await rollbackStock();
+        throw err;
+      }
 
     } else {
       // Mock mode fallback for local sandbox development
@@ -552,7 +584,12 @@ export const dbService = {
       if (error) return null;
       return data;
     } else {
-      if (email === 'uchichinyama@gmail.com' || email === 'ops@cosmicdept.com') {
+      // Offline allowlist is env-driven — no operator identities are baked
+      // into the shipped bundle.
+      const sandboxEmail = String(metaEnv.VITE_SANDBOX_ADMIN_EMAIL || '')
+        .trim()
+        .toLowerCase();
+      if (sandboxEmail && email.trim().toLowerCase() === sandboxEmail) {
         return {
           id: 'admin-1',
           email,

@@ -15,8 +15,8 @@ interface LoginViewProps {
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToStorefront }) => {
-  const [email, setEmail] = useState('uchichinyama@gmail.com');
-  const [password, setPassword] = useState('cosmic-ops-2026'); // Seeded safe default password for easy testing
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   
   // Rate limiting lock states
@@ -132,8 +132,23 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToSt
         }
       }
     } else {
-      // Offline/Sandbox Mode Fallback
-      const isSuccess = email.trim().toLowerCase() === 'uchichinyama@gmail.com' && password === 'cosmic-ops-2026';
+      // Offline/Sandbox Mode Fallback.
+      // Credentials are NEVER hardcoded in the bundle — they are injected at
+      // build time via env vars. If none are configured, offline login is
+      // disabled so no shipped secret can grant admin access.
+      const env = (import.meta as any).env || {};
+      const sandboxEmail = String(env.VITE_SANDBOX_ADMIN_EMAIL || '').trim().toLowerCase();
+      const sandboxPasscode = String(env.VITE_SANDBOX_ADMIN_PASSCODE || '');
+
+      if (!sandboxEmail || !sandboxPasscode) {
+        setError(
+          'OFFLINE MODE LOCKED: No sandbox operator is configured. Set VITE_SANDBOX_ADMIN_EMAIL and VITE_SANDBOX_ADMIN_PASSCODE, or configure Supabase for live authentication.'
+        );
+        return;
+      }
+
+      const isSuccess =
+        email.trim().toLowerCase() === sandboxEmail && password === sandboxPasscode;
 
       if (isSuccess) {
         // Clear security flags on success
@@ -192,7 +207,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onBackToSt
         <div className="mb-6 p-3 bg-accent-purple/5 border border-retro-border/50 text-cream-muted text-xs leading-relaxed flex items-start gap-2">
           <Info size={16} className="text-accent-purple shrink-0 mt-0.5" />
           <div>
-            Welcome to <span className="text-cream font-bold">COSMIC DEPT</span> Admin. Authenticate using pre-populated credentials or standard developer credentials.
+            Welcome to <span className="text-cream font-bold">COSMIC DEPT</span> Admin. Authenticate with your authorized operator credentials to access the secure console.
           </div>
         </div>
 

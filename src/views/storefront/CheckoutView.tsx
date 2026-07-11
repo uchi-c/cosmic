@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Truck, ShoppingBag, CheckCircle, ArrowRight, HelpCircle, ArrowLeft } from 'lucide-react';
 import { Order, OrderItem, CategoryType } from '../../types';
-import { dbService } from '../../lib/supabase';
+import { dbService, isSupabaseConfigured } from '../../lib/supabase';
 
 interface CheckoutViewProps {
   cartItems: OrderItem[];
@@ -80,18 +80,29 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         notes: notes.trim() || null,
       };
 
-      // 2. Dispatch secure order creation to the database service
+      // 2. Dispatch secure order creation to the database service.
+      //    Orders are always created server-side with payment_status='pending'.
       const orderResult = await dbService.createOrder(orderPayload);
 
-      // 3. Implement secure verified payment step transitions
-      if (paymentMethod === 'Stripe Credit Card' || paymentMethod === 'Apple Pay') {
-        // Trigger payment confirmation handshake
+      // 3. Payment confirmation.
+      //    SECURITY: a browser must never be able to certify its own payment.
+      //    In live mode we leave the order PENDING — a trusted backend / payment
+      //    webhook is the only thing allowed to flip it to 'paid'. We only
+      //    simulate an instant confirmation in the offline sandbox, where there
+      //    is no real money and no server to defer to.
+      const isCardRail =
+        paymentMethod === 'Stripe Credit Card' || paymentMethod === 'Apple Pay';
+
+      if (isCardRail && !isSupabaseConfigured()) {
+        // Sandbox-only simulated settlement (clearly marked, not a real session).
         const confirmedOrder = await dbService.confirmPayment(
-          orderResult.id, 
-          `cs_live_${Math.random().toString(36).substring(2, 10)}`
+          orderResult.id,
+          `sandbox_sim_${Math.random().toString(36).substring(2, 10)}`
         );
         setCreatedOrder(confirmedOrder);
       } else {
+        // Live mode (or non-card rails): order stays pending awaiting backend
+        // confirmation. The success screen reflects this honestly.
         setCreatedOrder(orderResult);
       }
 
@@ -106,14 +117,18 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
 
   // SUCCESS STATE SCREEN RENDERING
   if (createdOrder) {
+    const isSettled = createdOrder.payment_status === 'paid';
     return (
       <div className="max-w-xl mx-auto py-16 px-4 text-center space-y-8 font-sans select-none text-[#F8F3E9] selection:bg-[#9B6DFF] selection:text-[#0A0812]">
         
         {/* Animated Checkmark and Title */}
         <div className="flex flex-col items-center space-y-3">
-          <CheckCircle size={56} className="text-[#39FF14] animate-bounce" />
+          <CheckCircle
+            size={56}
+            className={`${isSettled ? 'text-[#39FF14]' : 'text-[#B68D40]'} animate-bounce`}
+          />
           <h2 className="font-serif text-3xl tracking-wider text-[#F8F3E9] uppercase font-bold italic">
-            Cargo Dispatched!
+            {isSettled ? 'Cargo Dispatched!' : 'Order Received!'}
           </h2>
           <span className="text-[10px] font-body-mono text-[#B68D40] tracking-[0.25em] font-bold block uppercase">
             Order Reference: {createdOrder.id}
@@ -123,7 +138,11 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         {/* Success summary card */}
         <div className="bg-[#120F1E] border border-[#2A1F45] p-6 space-y-5 text-left text-xs font-body-mono">
           <div className="border-b border-[#2A1F45] pb-3 text-center">
-            <span className="text-[#39FF14] font-bold">TRANSACTION CERTIFIED & VERIFIED</span>
+            {isSettled ? (
+              <span className="text-[#39FF14] font-bold">TRANSACTION CERTIFIED &amp; VERIFIED</span>
+            ) : (
+              <span className="text-[#B68D40] font-bold">ORDER LOGGED // AWAITING PAYMENT CONFIRMATION</span>
+            )}
           </div>
 
           <div className="space-y-2 leading-relaxed">
@@ -141,7 +160,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
             </div>
             <div>
               <span className="text-[#F8F3E9]/50 uppercase">Clearing Status:</span>{' '}
-              <span className="text-[#39FF14] font-bold uppercase">{createdOrder.payment_status}</span>
+              <span className={`${isSettled ? 'text-[#39FF14]' : 'text-[#B68D40]'} font-bold uppercase`}>{createdOrder.payment_status}</span>
             </div>
             <div>
               <span className="text-[#F8F3E9]/50 uppercase">Cargo List:</span>
@@ -162,7 +181,9 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
 
         {/* Security / Delivery parameters */}
         <p className="text-xs text-[#F8F3E9]/65 leading-relaxed font-light">
-          Your dispatch authorization forms have been compiled and sent to our logistical crew at Great East Road, Lusaka. Standard interplanetary cargo freight is estimated to deliver within 3-5 operational solar days.
+          {isSettled
+            ? 'Your dispatch authorization forms have been compiled and sent to our logistical crew at Great East Road, Lusaka. Standard interplanetary cargo freight is estimated to deliver within 3-5 operational solar days.'
+            : 'Your order has been logged securely. Once payment is confirmed by our clearing house, dispatch will be authorized and you will receive a settlement confirmation at your comms frequency.'}
         </p>
 
         {/* Home redirect */}
