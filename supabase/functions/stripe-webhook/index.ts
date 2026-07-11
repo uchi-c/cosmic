@@ -46,29 +46,39 @@ Deno.serve(async (req) => {
     return new Response(`Webhook Error: ${(err as Error).message}`, { status: 400 });
   }
 
-  const session = event.data.object as Stripe.Checkout.Session;
-  const orderId = session?.metadata?.order_id;
+  // Both flows stamp order_id into metadata: hosted Checkout (Session) and the
+  // on-site Payment Element (PaymentIntent).
+  const obj = event.data.object as
+    | Stripe.Checkout.Session
+    | Stripe.PaymentIntent;
+  const orderId = (obj as any)?.metadata?.order_id as string | undefined;
+
+  const SETTLE_EVENTS = new Set([
+    'checkout.session.completed',
+    'checkout.session.async_payment_succeeded',
+    'payment_intent.succeeded',
+  ]);
+  const FAIL_EVENTS = new Set([
+    'checkout.session.expired',
+    'checkout.session.async_payment_failed',
+    'payment_intent.payment_failed',
+    'payment_intent.canceled',
+  ]);
 
   try {
-    if (
-      event.type === 'checkout.session.completed' ||
-      event.type === 'checkout.session.async_payment_succeeded'
-    ) {
+    if (SETTLE_EVENTS.has(event.type)) {
       if (orderId) {
         await supabase
           .from('orders')
           .update({
             payment_status: 'paid',
             order_status: 'processing',
-            stripe_session: session.id,
+            stripe_session: (obj as any).id,
             updated_at: new Date().toISOString(),
           })
           .eq('id', orderId);
       }
-    } else if (
-      event.type === 'checkout.session.expired' ||
-      event.type === 'checkout.session.async_payment_failed'
-    ) {
+    } else if (FAIL_EVENTS.has(event.type)) {
       // Payment never completed → release the reserved stock and fail the order.
       if (orderId) {
         const { data: order } = await supabase

@@ -32,6 +32,7 @@ else
 fi
 
 echo "==> Deploying functions"
+supabase functions deploy create-payment-intent
 supabase functions deploy create-checkout-session
 supabase functions deploy stripe-webhook --no-verify-jwt
 
