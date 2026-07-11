@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { ShieldCheck, Truck, ShoppingBag, CheckCircle, ArrowRight, HelpCircle, ArrowLeft } from 'lucide-react';
 import { Order, OrderItem, CategoryType } from '../../types';
 import { dbService, isSupabaseConfigured } from '../../lib/supabase';
+import { isStripeRail, startStripeCheckout } from '../../lib/payments';
 
 interface CheckoutViewProps {
   cartItems: OrderItem[];
@@ -84,16 +85,22 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       //    Orders are always created server-side with payment_status='pending'.
       const orderResult = await dbService.createOrder(orderPayload);
 
-      // 3. Payment confirmation.
-      //    SECURITY: a browser must never be able to certify its own payment.
-      //    In live mode we leave the order PENDING — a trusted backend / payment
-      //    webhook is the only thing allowed to flip it to 'paid'. We only
-      //    simulate an instant confirmation in the offline sandbox, where there
-      //    is no real money and no server to defer to.
-      const isCardRail =
-        paymentMethod === 'Stripe Credit Card' || paymentMethod === 'Apple Pay';
+      // 3. Payment.
+      //    SECURITY: a browser must never certify its own payment. Card rails in
+      //    live mode redirect to hosted Stripe Checkout; only the Stripe webhook
+      //    may flip the order to 'paid'. The offline sandbox simulates a
+      //    settlement (no real money, no server). Non-card rails stay pending.
+      const cardRail = isStripeRail(paymentMethod);
 
-      if (isCardRail && !isSupabaseConfigured()) {
+      if (cardRail && isSupabaseConfigured()) {
+        // Redirect to Stripe Checkout. Leave the cart intact until the payment
+        // succeeds (cleared on the success return); on cancel the cart survives.
+        const checkoutUrl = await startStripeCheckout(orderResult.id);
+        window.location.href = checkoutUrl;
+        return; // navigating away
+      }
+
+      if (cardRail && !isSupabaseConfigured()) {
         // Sandbox-only simulated settlement (clearly marked, not a real session).
         const confirmedOrder = await dbService.confirmPayment(
           orderResult.id,
@@ -101,8 +108,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         );
         setCreatedOrder(confirmedOrder);
       } else {
-        // Live mode (or non-card rails): order stays pending awaiting backend
-        // confirmation. The success screen reflects this honestly.
+        // Non-card rails (mobile money, crypto): pending awaiting confirmation.
         setCreatedOrder(orderResult);
       }
 

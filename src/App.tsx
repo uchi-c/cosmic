@@ -29,6 +29,7 @@ import { ShopView } from './views/storefront/ShopView';
 import { ProductDetailView } from './views/storefront/ProductDetailView';
 import { CartDrawer } from './components/storefront/CartDrawer';
 import { CheckoutView } from './views/storefront/CheckoutView';
+import { OrderReturnView } from './views/storefront/OrderReturnView';
 
 export default function App() {
   const [operatorEmail, setOperatorEmail] = useState<string | null>(null);
@@ -53,6 +54,11 @@ export default function App() {
   // System Loading state
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
+
+  // Stripe Checkout return state (?order_success / ?order_cancelled)
+  const [checkoutReturn, setCheckoutReturn] = useState<
+    { status: 'success' | 'cancelled'; orderId: string } | null
+  >(null);
 
   // ==========================================
   // AUTH & INACTIVITY INTRUSION DETECTORS
@@ -104,11 +110,46 @@ export default function App() {
     };
   }, [operatorEmail]);
 
+  // Detect return from hosted Stripe Checkout (?order_success / ?order_cancelled)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('order_success');
+    const cancelled = params.get('order_cancelled');
+    if (!success && !cancelled) return;
+
+    // Land the shopper on the storefront return screen.
+    setViewMode('storefront');
+    setSelectedStorefrontProduct(null);
+
+    if (success) {
+      setCheckoutReturn({ status: 'success', orderId: success });
+      // Payment captured server-side → the cart is done.
+      setCartItems([]);
+      localStorage.removeItem('cosmic_cart');
+    } else if (cancelled) {
+      setCheckoutReturn({ status: 'cancelled', orderId: cancelled });
+    }
+
+    // Strip the query params so a refresh doesn't re-trigger the screen.
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
+
   // Load operator state & database records on initial load
   useEffect(() => {
     const checkSessionAndFetch = async () => {
       setLoading(true);
-      
+
+      // Failsafe: never leave the shopper stranded on the boot loader if the
+      // database is slow or unreachable (supabase-js fetches have no timeout).
+      const failsafe = setTimeout(() => {
+        setDbError(
+          (prev) =>
+            prev ||
+            'DATABASE TIMEOUT: The registry did not respond in time. Operating in degraded mode — some records may be unavailable.'
+        );
+        setLoading(false);
+      }, 9000);
+
       const isProduction = !!((import.meta as any).env)?.PROD;
       
       // If Supabase is not configured, log it and set dbError notification banner
@@ -163,6 +204,7 @@ export default function App() {
         console.error('Core databases synchronization fault:', err);
         setDbError('DATABASE INTEGRATION ERROR: Connection failed or database is unreachable. Operating on fallback local storage.');
       } finally {
+        clearTimeout(failsafe);
         setLoading(false);
       }
     };
@@ -580,14 +622,27 @@ export default function App() {
         <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
           <AnimatePresence mode="wait">
             <motion.div
-              key={selectedStorefrontProduct ? `detail-${selectedStorefrontProduct.id}` : storefrontPage}
+              key={checkoutReturn ? `return-${checkoutReturn.status}` : selectedStorefrontProduct ? `detail-${selectedStorefrontProduct.id}` : storefrontPage}
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.25 }}
               className="w-full h-full"
             >
-              {selectedStorefrontProduct ? (
+              {checkoutReturn ? (
+                <OrderReturnView
+                  status={checkoutReturn.status}
+                  orderId={checkoutReturn.orderId}
+                  onContinue={() => {
+                    setCheckoutReturn(null);
+                    handleStorefrontNavigate('home');
+                  }}
+                  onResumeCheckout={() => {
+                    setCheckoutReturn(null);
+                    setStorefrontPage('checkout');
+                  }}
+                />
+              ) : selectedStorefrontProduct ? (
                 <ProductDetailView
                   product={selectedStorefrontProduct}
                   allProducts={products}
