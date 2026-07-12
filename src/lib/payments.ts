@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { loadStripe, type Stripe } from '@stripe/stripe-js';
+import type { Stripe } from '@stripe/stripe-js';
 import { supabase, isSupabaseConfigured } from './supabase';
 
 /** Card rails that route through Stripe. */
@@ -19,11 +19,16 @@ const publishableKey = String(
 export const isStripeConfigured = (): boolean =>
   isSupabaseConfigured() && publishableKey.startsWith('pk_');
 
-// Load Stripe.js once, lazily.
+// Load Stripe.js once, lazily — the SDK is dynamically imported so it lands in
+// its own chunk and never ships in the initial storefront payload.
 let stripePromise: Promise<Stripe | null> | null = null;
 export const getStripe = (): Promise<Stripe | null> => {
   if (!publishableKey) return Promise.resolve(null);
-  if (!stripePromise) stripePromise = loadStripe(publishableKey);
+  if (!stripePromise) {
+    stripePromise = import('@stripe/stripe-js').then((m) =>
+      m.loadStripe(publishableKey)
+    );
+  }
   return stripePromise;
 };
 

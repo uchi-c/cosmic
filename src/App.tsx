@@ -8,18 +8,18 @@ import { motion, AnimatePresence } from 'motion/react';
 import { dbService, supabase, isSupabaseConfigured } from './lib/supabase';
 import { Product, Order, OrderItem, CategoryType, StoreSettings } from './types';
 
-// Sidebar / Header shell elements
-import { Sidebar, AdminViewType } from './components/admin/Sidebar';
-import { Header } from './components/admin/Header';
-
-// View Screens
-import { LoginView } from './views/LoginView';
-import { DashboardView } from './views/DashboardView';
-import { ProductsListView } from './views/ProductsListView';
-import { ProductFormView } from './views/ProductFormView';
-import { OrdersListView } from './views/OrdersListView';
-import { OrderDetailView } from './views/OrderDetailView';
-import { SettingsView } from './views/SettingsView';
+// Admin console shell + screens — lazily loaded so storefront visitors never
+// download the merchant back-office bundle.
+import type { AdminViewType } from './components/admin/Sidebar';
+const Sidebar = React.lazy(() => import('./components/admin/Sidebar').then((m) => ({ default: m.Sidebar })));
+const Header = React.lazy(() => import('./components/admin/Header').then((m) => ({ default: m.Header })));
+const LoginView = React.lazy(() => import('./views/LoginView').then((m) => ({ default: m.LoginView })));
+const DashboardView = React.lazy(() => import('./views/DashboardView').then((m) => ({ default: m.DashboardView })));
+const ProductsListView = React.lazy(() => import('./views/ProductsListView').then((m) => ({ default: m.ProductsListView })));
+const ProductFormView = React.lazy(() => import('./views/ProductFormView').then((m) => ({ default: m.ProductFormView })));
+const OrdersListView = React.lazy(() => import('./views/OrdersListView').then((m) => ({ default: m.OrdersListView })));
+const OrderDetailView = React.lazy(() => import('./views/OrderDetailView').then((m) => ({ default: m.OrderDetailView })));
+const SettingsView = React.lazy(() => import('./views/SettingsView').then((m) => ({ default: m.SettingsView })));
 
 // Customer Storefront elements
 import { Navbar } from './components/storefront/Navbar';
@@ -712,17 +712,30 @@ export default function App() {
   // MERCHANT BACK-OFFICE OPERATIONS ROUTING
   // ==========================================
 
+  // Fallback while a lazily-loaded admin chunk is fetched.
+  const adminBootFallback = (
+    <div className="min-h-screen bg-space-black flex flex-col justify-center items-center gap-4 font-body-mono text-accent-purple select-none">
+      <span className="w-8 h-8 border-4 border-accent-purple border-t-transparent animate-spin" />
+      <p className="font-retro-heading text-[10px] tracking-widest text-cream uppercase animate-pulse">
+        LOADING ADMIN CONSOLE
+      </p>
+    </div>
+  );
+
   // If no active session, restrict access and load Login Portal view
   if (!operatorEmail) {
     return (
-      <LoginView
-        onLoginSuccess={handleLogin}
-        onBackToStorefront={() => setViewMode('storefront')}
-      />
+      <React.Suspense fallback={adminBootFallback}>
+        <LoginView
+          onLoginSuccess={handleLogin}
+          onBackToStorefront={() => setViewMode('storefront')}
+        />
+      </React.Suspense>
     );
   }
 
   return (
+    <React.Suspense fallback={adminBootFallback}>
     <div className="min-h-screen bg-space-black flex font-body-mono text-cream selection:bg-accent-purple selection:text-space-black">
       {/* 1. Left Navigation Sidebar */}
       <Sidebar
@@ -781,5 +794,6 @@ export default function App() {
         </main>
       </div>
     </div>
+    </React.Suspense>
   );
 }

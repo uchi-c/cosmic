@@ -8,7 +8,13 @@ import { ShieldCheck, Truck, ShoppingBag, CheckCircle, ArrowRight, HelpCircle, A
 import { Order, OrderItem, CategoryType } from '../../types';
 import { dbService, isSupabaseConfigured } from '../../lib/supabase';
 import { isStripeRail, isStripeConfigured, createPaymentIntent, startStripeCheckout } from '../../lib/payments';
-import { StripePaymentPanel } from '../../components/storefront/StripePaymentPanel';
+
+// Lazy — the Stripe React SDK only loads when a shopper reaches the pay step.
+const StripePaymentPanel = React.lazy(() =>
+  import('../../components/storefront/StripePaymentPanel').then((m) => ({
+    default: m.StripePaymentPanel,
+  }))
+);
 
 interface CheckoutViewProps {
   cartItems: OrderItem[];
@@ -152,21 +158,29 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         </div>
 
         <div className="bg-[#120F1E] border border-[#2A1F45] p-5">
-          <StripePaymentPanel
-            clientSecret={stripePayment.clientSecret}
-            amountLabel={amountLabel}
-            orderId={stripePayment.order.id}
-            onPaid={() => {
-              setCreatedOrder({
-                ...stripePayment.order,
-                payment_status: 'paid',
-                order_status: 'processing',
-              });
-              setStripePayment(null);
-              onClearCart();
-            }}
-            onBack={() => setStripePayment(null)}
-          />
+          <React.Suspense
+            fallback={
+              <div className="py-10 text-center font-body-mono text-xs uppercase tracking-widest text-[#9B6DFF] animate-pulse">
+                INITIALIZING SECURE PAYMENT MODULE...
+              </div>
+            }
+          >
+            <StripePaymentPanel
+              clientSecret={stripePayment.clientSecret}
+              amountLabel={amountLabel}
+              orderId={stripePayment.order.id}
+              onPaid={() => {
+                setCreatedOrder({
+                  ...stripePayment.order,
+                  payment_status: 'paid',
+                  order_status: 'processing',
+                });
+                setStripePayment(null);
+                onClearCart();
+              }}
+              onBack={() => setStripePayment(null)}
+            />
+          </React.Suspense>
         </div>
       </div>
     );
