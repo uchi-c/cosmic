@@ -189,6 +189,26 @@ and update `VITE_STRIPE_PUBLISHABLE_KEY` in Vercel.
 
 ---
 
+## 3f. CI/CD (GitHub Actions)
+
+Two workflows ship in `.github/workflows/`:
+
+- **`ci.yml`** — typecheck + build on every push/PR (no secrets needed).
+- **`deploy-supabase-functions.yml`** — deploys the edge functions on pushes to
+  `main` that touch `supabase/functions/**` (or run it manually from the Actions
+  tab).
+
+For the deploy workflow, add these in **Settings → Secrets and variables → Actions**:
+
+| Name | Type | Value |
+|---|---|---|
+| `SUPABASE_ACCESS_TOKEN` | secret (required) | supabase.com/dashboard/account/tokens |
+| `STRIPE_SECRET_KEY` | secret (optional) | synced to the project on deploy if set |
+| `STRIPE_WEBHOOK_SECRET` | secret (optional) | synced to the project on deploy if set |
+| `SUPABASE_PROJECT_REF` | variable (optional) | defaults to `rxbbibzyyhyksqzlcnll` |
+
+App hosting (the Vite frontend) is handled by Vercel's Git integration — see below.
+
 ## 4. Deploy to Vercel
 
 The repo is Vite-ready (`vercel.json` present).
