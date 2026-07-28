@@ -73,6 +73,12 @@ begin
 end;
 $$;
 
--- Allow both the storefront (anon) and admin (authenticated) roles to call them.
-grant execute on function public.decrement_product_stock(uuid, integer) to anon, authenticated;
-grant execute on function public.restore_product_stock(uuid, integer)   to anon, authenticated;
+-- These raw mutators must NOT be reachable by the storefront (anon) or by
+-- ordinary authenticated users: direct access would let any caller inflate or
+-- decrement inventory for any product/quantity without ever creating an order.
+-- Only two trusted paths touch stock:
+--   • place_order() (SECURITY DEFINER, runs as owner) decrements stock inline
+--   • the Stripe webhook (service_role) calls restore_product_stock on failure
+revoke execute on function public.decrement_product_stock(uuid, integer) from public, anon, authenticated;
+revoke execute on function public.restore_product_stock(uuid, integer)   from public, anon, authenticated;
+grant  execute on function public.restore_product_stock(uuid, integer)   to service_role;

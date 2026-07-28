@@ -31,10 +31,13 @@ data in localStorage). Configure the steps below to go live.
 Supabase Dashboard → **SQL Editor** → paste + run each file **in this order**:
 
 1. `supabase/migrations/0000_init_schema.sql` — tables (`products`, `orders`,
-   `admin_users`) + indexes + Row Level Security + policies.
-2. `supabase/migrations/0001_atomic_stock.sql` — atomic stock RPCs
-   (`decrement_product_stock`, `restore_product_stock`).
-3. `supabase/seed.sql` — demo catalog + admin allowlist row.
+   `admin_users`) + indexes + Row Level Security + `is_admin()` allowlist policies.
+2. `supabase/migrations/0001_atomic_stock.sql` — stock functions
+   (`decrement_product_stock`, `restore_product_stock`), locked down to
+   trusted callers only.
+3. `supabase/migrations/0002_place_order.sql` — `place_order()` RPC: the only
+   way the storefront creates an order (server-computed totals + atomic stock).
+4. `supabase/seed.sql` — demo catalog + admin allowlist row.
 
 > Running `0001` before `0000` is the cause of `ERROR: 42P01: relation
 > "public.products" does not exist`. Always run `0000` first.
@@ -222,7 +225,7 @@ The repo is Vite-ready (`vercel.json` present).
 
 ## 5. Verification checklist
 
-- [ ] `0000` → `0001` → `seed.sql` run without error; `products` has rows.
+- [ ] `0000` → `0001` → `0002` → `seed.sql` run without error; `products` has rows.
 - [ ] Storefront lists products (no red DB banner).
 - [ ] Auth user created **and** email present in `admin_users`; admin login works.
 - [ ] `VITE_*` set locally and in Vercel.

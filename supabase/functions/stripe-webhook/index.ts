@@ -58,17 +58,21 @@ Deno.serve(async (req) => {
     'checkout.session.async_payment_succeeded',
     'payment_intent.succeeded',
   ]);
+  // Terminal failures only. NOTE: `payment_intent.payment_failed` is
+  // deliberately excluded — a declined card attempt is retryable and the same
+  // PaymentIntent may still succeed, so releasing stock on it would return
+  // inventory that a later success then resells. We only release on states the
+  // PaymentIntent/session can no longer recover from.
   const FAIL_EVENTS = new Set([
     'checkout.session.expired',
     'checkout.session.async_payment_failed',
-    'payment_intent.payment_failed',
     'payment_intent.canceled',
   ]);
 
   try {
     if (SETTLE_EVENTS.has(event.type)) {
       if (orderId) {
-        await supabase
+        const { error } = await supabase
           .from('orders')
           .update({
             payment_status: 'paid',
@@ -77,34 +81,43 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq('id', orderId);
+        if (error) throw new Error(`settle update failed: ${error.message}`);
       }
     } else if (FAIL_EVENTS.has(event.type)) {
-      // Payment never completed → release the reserved stock and fail the order.
+      // Payment can no longer complete → release the reserved stock and fail it.
       if (orderId) {
-        const { data: order } = await supabase
+        const { data: order, error: readErr } = await supabase
           .from('orders')
           .select('items, payment_status')
           .eq('id', orderId)
           .single();
+        if (readErr) throw new Error(`order read failed: ${readErr.message}`);
 
         if (order && order.payment_status !== 'paid') {
           for (const it of order.items ?? []) {
-            await supabase.rpc('restore_product_stock', {
+            const { error: rErr } = await supabase.rpc('restore_product_stock', {
               p_id: it.id,
               p_qty: it.quantity,
             });
+            if (rErr) throw new Error(`stock restore failed: ${rErr.message}`);
           }
-          await supabase
+          const { error: fErr } = await supabase
             .from('orders')
             .update({ payment_status: 'failed', updated_at: new Date().toISOString() })
             .eq('id', orderId);
+          if (fErr) throw new Error(`fail update failed: ${fErr.message}`);
         }
       }
     }
   } catch (e) {
-    // Log and still 200 so Stripe doesn't hammer retries on a transient DB blip;
-    // reconciliation can be handled out of band.
+    // Settlement work failed (transient DB/RPC issue, or a missing RPC). Return
+    // a non-2xx so Stripe redelivers the event instead of marking it handled
+    // while the order is left in the wrong state.
     console.error('webhook handling error', e);
+    return new Response(
+      JSON.stringify({ error: 'settlement failed; please retry' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   return new Response(JSON.stringify({ received: true }), {
