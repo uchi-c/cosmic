@@ -8,18 +8,18 @@ import { motion, AnimatePresence } from 'motion/react';
 import { dbService, supabase, isSupabaseConfigured } from './lib/supabase';
 import { Product, Order, OrderItem, CategoryType, StoreSettings } from './types';
 
-// Sidebar / Header shell elements
-import { Sidebar, AdminViewType } from './components/admin/Sidebar';
-import { Header } from './components/admin/Header';
-
-// View Screens
-import { LoginView } from './views/LoginView';
-import { DashboardView } from './views/DashboardView';
-import { ProductsListView } from './views/ProductsListView';
-import { ProductFormView } from './views/ProductFormView';
-import { OrdersListView } from './views/OrdersListView';
-import { OrderDetailView } from './views/OrderDetailView';
-import { SettingsView } from './views/SettingsView';
+// Admin console shell + screens — lazily loaded so storefront visitors never
+// download the merchant back-office bundle.
+import type { AdminViewType } from './components/admin/Sidebar';
+const Sidebar = React.lazy(() => import('./components/admin/Sidebar').then((m) => ({ default: m.Sidebar })));
+const Header = React.lazy(() => import('./components/admin/Header').then((m) => ({ default: m.Header })));
+const LoginView = React.lazy(() => import('./views/LoginView').then((m) => ({ default: m.LoginView })));
+const DashboardView = React.lazy(() => import('./views/DashboardView').then((m) => ({ default: m.DashboardView })));
+const ProductsListView = React.lazy(() => import('./views/ProductsListView').then((m) => ({ default: m.ProductsListView })));
+const ProductFormView = React.lazy(() => import('./views/ProductFormView').then((m) => ({ default: m.ProductFormView })));
+const OrdersListView = React.lazy(() => import('./views/OrdersListView').then((m) => ({ default: m.OrdersListView })));
+const OrderDetailView = React.lazy(() => import('./views/OrderDetailView').then((m) => ({ default: m.OrderDetailView })));
+const SettingsView = React.lazy(() => import('./views/SettingsView').then((m) => ({ default: m.SettingsView })));
 
 // Customer Storefront elements
 import { Navbar } from './components/storefront/Navbar';
@@ -29,6 +29,7 @@ import { ShopView } from './views/storefront/ShopView';
 import { ProductDetailView } from './views/storefront/ProductDetailView';
 import { CartDrawer } from './components/storefront/CartDrawer';
 import { CheckoutView } from './views/storefront/CheckoutView';
+import { OrderReturnView } from './views/storefront/OrderReturnView';
 
 export default function App() {
   const [operatorEmail, setOperatorEmail] = useState<string | null>(null);
@@ -53,6 +54,11 @@ export default function App() {
   // System Loading state
   const [loading, setLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
+
+  // Stripe Checkout return state (?order_success / ?order_cancelled)
+  const [checkoutReturn, setCheckoutReturn] = useState<
+    { status: 'success' | 'cancelled'; orderId: string } | null
+  >(null);
 
   // ==========================================
   // AUTH & INACTIVITY INTRUSION DETECTORS
@@ -104,11 +110,46 @@ export default function App() {
     };
   }, [operatorEmail]);
 
+  // Detect return from hosted Stripe Checkout (?order_success / ?order_cancelled)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('order_success');
+    const cancelled = params.get('order_cancelled');
+    if (!success && !cancelled) return;
+
+    // Land the shopper on the storefront return screen.
+    setViewMode('storefront');
+    setSelectedStorefrontProduct(null);
+
+    if (success) {
+      setCheckoutReturn({ status: 'success', orderId: success });
+      // Payment captured server-side → the cart is done.
+      setCartItems([]);
+      localStorage.removeItem('cosmic_cart');
+    } else if (cancelled) {
+      setCheckoutReturn({ status: 'cancelled', orderId: cancelled });
+    }
+
+    // Strip the query params so a refresh doesn't re-trigger the screen.
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
+
   // Load operator state & database records on initial load
   useEffect(() => {
     const checkSessionAndFetch = async () => {
       setLoading(true);
-      
+
+      // Failsafe: never leave the shopper stranded on the boot loader if the
+      // database is slow or unreachable (supabase-js fetches have no timeout).
+      const failsafe = setTimeout(() => {
+        setDbError(
+          (prev) =>
+            prev ||
+            'DATABASE TIMEOUT: The registry did not respond in time. Operating in degraded mode — some records may be unavailable.'
+        );
+        setLoading(false);
+      }, 9000);
+
       const isProduction = !!((import.meta as any).env)?.PROD;
       
       // If Supabase is not configured, log it and set dbError notification banner
@@ -163,6 +204,7 @@ export default function App() {
         console.error('Core databases synchronization fault:', err);
         setDbError('DATABASE INTEGRATION ERROR: Connection failed or database is unreachable. Operating on fallback local storage.');
       } finally {
+        clearTimeout(failsafe);
         setLoading(false);
       }
     };
@@ -580,14 +622,27 @@ export default function App() {
         <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
           <AnimatePresence mode="wait">
             <motion.div
-              key={selectedStorefrontProduct ? `detail-${selectedStorefrontProduct.id}` : storefrontPage}
+              key={checkoutReturn ? `return-${checkoutReturn.status}` : selectedStorefrontProduct ? `detail-${selectedStorefrontProduct.id}` : storefrontPage}
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.25 }}
               className="w-full h-full"
             >
-              {selectedStorefrontProduct ? (
+              {checkoutReturn ? (
+                <OrderReturnView
+                  status={checkoutReturn.status}
+                  orderId={checkoutReturn.orderId}
+                  onContinue={() => {
+                    setCheckoutReturn(null);
+                    handleStorefrontNavigate('home');
+                  }}
+                  onResumeCheckout={() => {
+                    setCheckoutReturn(null);
+                    setStorefrontPage('checkout');
+                  }}
+                />
+              ) : selectedStorefrontProduct ? (
                 <ProductDetailView
                   product={selectedStorefrontProduct}
                   allProducts={products}
@@ -657,17 +712,30 @@ export default function App() {
   // MERCHANT BACK-OFFICE OPERATIONS ROUTING
   // ==========================================
 
+  // Fallback while a lazily-loaded admin chunk is fetched.
+  const adminBootFallback = (
+    <div className="min-h-screen bg-space-black flex flex-col justify-center items-center gap-4 font-body-mono text-accent-purple select-none">
+      <span className="w-8 h-8 border-4 border-accent-purple border-t-transparent animate-spin" />
+      <p className="font-retro-heading text-[10px] tracking-widest text-cream uppercase animate-pulse">
+        LOADING ADMIN CONSOLE
+      </p>
+    </div>
+  );
+
   // If no active session, restrict access and load Login Portal view
   if (!operatorEmail) {
     return (
-      <LoginView
-        onLoginSuccess={handleLogin}
-        onBackToStorefront={() => setViewMode('storefront')}
-      />
+      <React.Suspense fallback={adminBootFallback}>
+        <LoginView
+          onLoginSuccess={handleLogin}
+          onBackToStorefront={() => setViewMode('storefront')}
+        />
+      </React.Suspense>
     );
   }
 
   return (
+    <React.Suspense fallback={adminBootFallback}>
     <div className="min-h-screen bg-space-black flex font-body-mono text-cream selection:bg-accent-purple selection:text-space-black">
       {/* 1. Left Navigation Sidebar */}
       <Sidebar
@@ -726,5 +794,6 @@ export default function App() {
         </main>
       </div>
     </div>
+    </React.Suspense>
   );
 }

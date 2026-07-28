@@ -7,6 +7,14 @@ import React, { useState } from 'react';
 import { ShieldCheck, Truck, ShoppingBag, CheckCircle, ArrowRight, HelpCircle, ArrowLeft } from 'lucide-react';
 import { Order, OrderItem, CategoryType } from '../../types';
 import { dbService, isSupabaseConfigured } from '../../lib/supabase';
+import { isStripeRail, isStripeConfigured, createPaymentIntent, startStripeCheckout } from '../../lib/payments';
+
+// Lazy — the Stripe React SDK only loads when a shopper reaches the pay step.
+const StripePaymentPanel = React.lazy(() =>
+  import('../../components/storefront/StripePaymentPanel').then((m) => ({
+    default: m.StripePaymentPanel,
+  }))
+);
 
 interface CheckoutViewProps {
   cartItems: OrderItem[];
@@ -32,6 +40,10 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
+  // On-site Stripe Payment Element step (order created + intent ready).
+  const [stripePayment, setStripePayment] = useState<
+    { clientSecret: string; order: Order } | null
+  >(null);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const total = subtotal; // Complimentary shipping is 0
@@ -84,16 +96,30 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       //    Orders are always created server-side with payment_status='pending'.
       const orderResult = await dbService.createOrder(orderPayload);
 
-      // 3. Payment confirmation.
-      //    SECURITY: a browser must never be able to certify its own payment.
-      //    In live mode we leave the order PENDING — a trusted backend / payment
-      //    webhook is the only thing allowed to flip it to 'paid'. We only
-      //    simulate an instant confirmation in the offline sandbox, where there
-      //    is no real money and no server to defer to.
-      const isCardRail =
-        paymentMethod === 'Stripe Credit Card' || paymentMethod === 'Apple Pay';
+      // 3. Payment.
+      //    SECURITY: a browser must never certify its own payment. Card rails in
+      //    live mode redirect to hosted Stripe Checkout; only the Stripe webhook
+      //    may flip the order to 'paid'. The offline sandbox simulates a
+      //    settlement (no real money, no server). Non-card rails stay pending.
+      const cardRail = isStripeRail(paymentMethod);
 
-      if (isCardRail && !isSupabaseConfigured()) {
+      if (cardRail && isStripeConfigured()) {
+        // Preferred: on-site Payment Element. Create the intent, then render the
+        // card form. Cart stays intact until payment succeeds.
+        const clientSecret = await createPaymentIntent(orderResult.id);
+        setStripePayment({ clientSecret, order: orderResult });
+        setIsSubmitting(false);
+        return; // hand off to the payment step
+      }
+
+      if (cardRail && isSupabaseConfigured()) {
+        // Fallback (Supabase live but no publishable key): hosted Stripe Checkout.
+        const checkoutUrl = await startStripeCheckout(orderResult.id);
+        window.location.href = checkoutUrl;
+        return; // navigating away
+      }
+
+      if (cardRail && !isSupabaseConfigured()) {
         // Sandbox-only simulated settlement (clearly marked, not a real session).
         const confirmedOrder = await dbService.confirmPayment(
           orderResult.id,
@@ -101,8 +127,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
         );
         setCreatedOrder(confirmedOrder);
       } else {
-        // Live mode (or non-card rails): order stays pending awaiting backend
-        // confirmation. The success screen reflects this honestly.
+        // Non-card rails (mobile money, crypto): pending awaiting confirmation.
         setCreatedOrder(orderResult);
       }
 
@@ -114,6 +139,52 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       setIsSubmitting(false);
     }
   };
+
+  // ON-SITE STRIPE PAYMENT STEP
+  if (stripePayment) {
+    const amountLabel = `$${stripePayment.order.total.toFixed(2)}`;
+    return (
+      <div className="max-w-lg mx-auto py-10 px-4 font-sans text-[#F8F3E9] selection:bg-[#9B6DFF] selection:text-[#0A0812]">
+        <div className="border-b border-[#2A1F45] pb-5 mb-6 text-center select-none">
+          <span className="text-[10px] font-body-mono text-[#B68D40] tracking-[0.3em] font-bold uppercase block mb-1">
+            CLEARING HOUSE // DESK 05
+          </span>
+          <h2 className="font-serif text-2xl tracking-wider uppercase font-semibold">
+            SETTLE TRANSACTION
+          </h2>
+          <span className="text-[10px] font-body-mono text-[#F8F3E9]/50 uppercase tracking-wider block mt-2">
+            Order Reference: {stripePayment.order.id}
+          </span>
+        </div>
+
+        <div className="bg-[#120F1E] border border-[#2A1F45] p-5">
+          <React.Suspense
+            fallback={
+              <div className="py-10 text-center font-body-mono text-xs uppercase tracking-widest text-[#9B6DFF] animate-pulse">
+                INITIALIZING SECURE PAYMENT MODULE...
+              </div>
+            }
+          >
+            <StripePaymentPanel
+              clientSecret={stripePayment.clientSecret}
+              amountLabel={amountLabel}
+              orderId={stripePayment.order.id}
+              onPaid={() => {
+                setCreatedOrder({
+                  ...stripePayment.order,
+                  payment_status: 'paid',
+                  order_status: 'processing',
+                });
+                setStripePayment(null);
+                onClearCart();
+              }}
+              onBack={() => setStripePayment(null)}
+            />
+          </React.Suspense>
+        </div>
+      </div>
+    );
+  }
 
   // SUCCESS STATE SCREEN RENDERING
   if (createdOrder) {
@@ -393,7 +464,13 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                 disabled={isSubmitting}
                 className="w-full py-4.5 bg-[#9B6DFF] hover:bg-[#9B6DFF]/85 text-[#0A0812] text-xs font-body-mono font-bold tracking-[0.2em] uppercase flex items-center justify-center gap-2 cursor-pointer transition-all shadow-[0_0_20px_rgba(155,109,255,0.4)] disabled:opacity-40 disabled:cursor-wait"
               >
-                <span>{isSubmitting ? 'AUTHORIZING DISPATCH...' : 'CONFIRM CARGO DISPATCH AUTHORIZATION'}</span>
+                <span>
+                  {isSubmitting
+                    ? 'AUTHORIZING DISPATCH...'
+                    : isStripeRail(paymentMethod) && isStripeConfigured()
+                    ? 'PROCEED TO SECURE PAYMENT'
+                    : 'CONFIRM CARGO DISPATCH AUTHORIZATION'}
+                </span>
                 <ArrowRight size={13} />
               </button>
             </div>

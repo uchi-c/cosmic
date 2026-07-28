@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { SlidersHorizontal, Search, ArrowUpDown, Eye, ShoppingCart, RefreshCw, X } from 'lucide-react';
 import { Product, CategoryType, BadgeType } from '../../types';
-import { SpotlightCard } from '../../components/ui/reactbits';
+import { Tilt3D } from '../../components/ui/reactbits';
 
 interface ShopViewProps {
   products: Product[];
@@ -378,7 +378,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
                 const hasSale = product.sale_price !== null && product.sale_price !== undefined;
 
                 return (
-                  <SpotlightCard key={product.id} className="group flex flex-col bg-[#120F1E] border border-[#2A1F45] overflow-hidden transition-all relative product-card-lift-glow">
+                  <Tilt3D key={product.id} max={9} className="group flex flex-col bg-[#120F1E] border border-[#2A1F45] overflow-hidden transition-all relative product-card-lift-glow">
 
                     {/* Promotional Badge overlay */}
                     {product.badge && (
@@ -462,7 +462,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
                       </div>
                     </div>
 
-                  </SpotlightCard>
+                  </Tilt3D>
                 );
               })}
             </div>

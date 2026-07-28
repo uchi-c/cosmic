@@ -1,0 +1,38 @@
+name: CI
+
+# Typecheck + production build on every push and PR.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run lint   # tsc --noEmit
+
+      - name: Build
+        run: npm run build
+        env:
+          # Build works without live keys — the app compiles the same regardless.
+          # Real values are supplied at deploy time (Vercel env).
+          VITE_SUPABASE_URL: ''
+          VITE_SUPABASE_ANON_KEY: ''
+          VITE_STRIPE_PUBLISHABLE_KEY: ''

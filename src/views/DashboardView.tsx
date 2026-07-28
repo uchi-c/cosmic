@@ -7,6 +7,7 @@ import React from 'react';
 import { Package, PackageCheck, ClipboardList, RefreshCw, Landmark, AlertTriangle, ChevronRight, PlusCircle, ShoppingCart } from 'lucide-react';
 import { Product, Order } from '../types';
 import { StatsCard } from '../components/admin/StatsCard';
+import { AnalyticsCharts } from '../components/admin/AnalyticsCharts';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 
@@ -123,6 +124,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           separator
         />
       </div>
+
+      {/* 2b. Stock + Finance Analytics */}
+      <AnalyticsCharts products={products} orders={orders} />
 
       {/* 3. Multi-Column: Alerts & Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

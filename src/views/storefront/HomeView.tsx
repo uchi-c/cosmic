@@ -10,7 +10,7 @@ import {
   Starfield,
   ShinyText,
   ScrollReveal,
-  SpotlightCard,
+  Tilt3D,
   MagneticButton,
 } from '../../components/ui/reactbits';
 
@@ -86,7 +86,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     const hasSale = product.sale_price !== null && product.sale_price !== undefined;
 
     return (
-      <SpotlightCard className="group flex flex-col bg-[#120F1E] border border-[#2A1F45] overflow-hidden transition-all relative product-card-lift-glow">
+      <Tilt3D max={9} className="group flex flex-col bg-[#120F1E] border border-[#2A1F45] overflow-hidden transition-all relative product-card-lift-glow">
         {/* Promotional Badge */}
         {product.badge && (
           <span className={`absolute top-3 left-3 z-10 text-[9px] tracking-widest px-2.5 py-1 font-body-mono font-bold uppercase select-none
@@ -168,7 +168,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             )}
           </div>
         </div>
-      </SpotlightCard>
+      </Tilt3D>
     );
   };
 

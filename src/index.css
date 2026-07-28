@@ -352,6 +352,108 @@ body {
   opacity: 1;
 }
 
+/* ============================================================
+   3D SYSTEM — perspective tilt + continuous rotation
+   ============================================================ */
+
+/* Perspective wrapper for pointer-driven Tilt3D cards */
+.tilt-3d {
+  perspective: 900px;
+  transform-style: preserve-3d;
+}
+.tilt-3d__inner {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+/* Moving glare sheen that rides the tilt */
+.tilt-3d__glare {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    circle at var(--glare-x, 50%) var(--glare-y, 50%),
+    rgba(var(--theme-accent-rgb), 0.28),
+    rgba(255, 255, 255, 0.06) 25%,
+    transparent 55%
+  );
+  mix-blend-mode: screen;
+}
+.tilt-3d:hover .tilt-3d__glare {
+  opacity: 1;
+}
+
+/* Continuous rotating conic accent ring (decorative) */
+@keyframes spin3d {
+  0% { transform: rotate3d(0.4, 1, 0, 0deg) rotate(0deg); }
+  100% { transform: rotate3d(0.4, 1, 0, 0deg) rotate(360deg); }
+}
+.animate-spin3d {
+  animation: spin3d 14s linear infinite;
+  transform-style: preserve-3d;
+}
+
+@keyframes spinY {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+.animate-spinY {
+  animation: spinY 9s linear infinite;
+  transform-style: preserve-3d;
+}
+
+/* ============================================================
+   BUTTON SYSTEM — tactile press + accessible focus, system-wide.
+   Applies to every <button> without touching each call site.
+   ============================================================ */
+button {
+  transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease, background-color 0.2s ease, border-color 0.2s ease,
+    color 0.2s ease;
+}
+button:not(:disabled):active {
+  transform: translateY(1px) scale(0.985);
+}
+button:focus-visible {
+  outline: 2px solid var(--theme-accent, #9B6DFF);
+  outline-offset: 2px;
+}
+
+/* Reusable animated sheen for primary CTAs (opt-in via .btn-sheen) */
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-sheen::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -140%;
+  width: 60%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent
+  );
+  transform: skewX(-18deg);
+  transition: none;
+}
+.btn-sheen:hover::after {
+  animation: btnSheen 0.85s ease;
+}
+@keyframes btnSheen {
+  0% { left: -140%; }
+  100% { left: 160%; }
+}
+
 /* Respect users who prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .shiny-text,
@@ -359,8 +461,16 @@ body {
   .animate-floatY,
   .animate-loaderBar,
   .animate-fadeIn,
-  .animate-slideLeft {
+  .animate-slideLeft,
+  .animate-spin3d,
+  .animate-spinY {
     animation: none !important;
+  }
+  .btn-sheen:hover::after {
+    animation: none !important;
+  }
+  .tilt-3d__inner {
+    transform: none !important;
   }
 }
 
