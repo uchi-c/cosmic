@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'rxbbibzyyhyksqzlcnll' }}
+      PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'ubpfikqzhznlvhckfdng' }}
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
     steps:

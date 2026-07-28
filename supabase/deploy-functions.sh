@@ -9,11 +9,11 @@
 #   ./supabase/deploy-functions.sh <project-ref>
 #
 # Example:
-#   ./supabase/deploy-functions.sh rxbbibzyyhyksqzlcnll
+#   ./supabase/deploy-functions.sh ubpfikqzhznlvhckfdng
 # ============================================================================
 set -euo pipefail
 
-PROJECT_REF="${1:?Pass your Supabase project ref, e.g. rxbbibzyyhyksqzlcnll}"
+PROJECT_REF="${1:?Pass your Supabase project ref, e.g. ubpfikqzhznlvhckfdng}"
 
 if [[ -z "${STRIPE_SECRET_KEY:-}" ]]; then
   echo "ERROR: export STRIPE_SECRET_KEY before running (use your own TEST key first)." >&2

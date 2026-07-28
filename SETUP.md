@@ -11,7 +11,7 @@ Order matters: **Supabase database → env vars → Stripe → deploy**.
 
 - **Node.js** 20+ and npm
 - **Supabase CLI** — `npm i -g supabase` (or `brew install supabase/tap/supabase`)
-- A **Supabase** project (this repo targets ref `rxbbibzyyhyksqzlcnll`)
+- A **Supabase** project (this repo targets ref `ubpfikqzhznlvhckfdng`)
 - A **Stripe** account (start in **Test mode**)
 
 ```bash
@@ -45,7 +45,7 @@ Supabase Dashboard → **SQL Editor** → paste + run each file **in this order*
 CLI alternative (runs migrations + seed automatically):
 
 ```bash
-supabase link --project-ref rxbbibzyyhyksqzlcnll
+supabase link --project-ref ubpfikqzhznlvhckfdng
 supabase db push          # applies supabase/migrations/*
 # seed.sql is applied by `supabase db reset` locally; in prod paste it once in the SQL editor
 ```
@@ -97,7 +97,7 @@ automatically and must never reach the client.
 `.env.local` (git-ignored — never committed):
 
 ```bash
-VITE_SUPABASE_URL="https://rxbbibzyyhyksqzlcnll.supabase.co"
+VITE_SUPABASE_URL="https://ubpfikqzhznlvhckfdng.supabase.co"
 VITE_SUPABASE_ANON_KEY="sb_publishable_xxx"
 VITE_STRIPE_PUBLISHABLE_KEY="pk_test_xxx"
 ```
@@ -129,13 +129,13 @@ One command (reads secrets from your shell, stores nothing):
 
 ```bash
 export STRIPE_SECRET_KEY=sk_test_your_secret_key
-./supabase/deploy-functions.sh rxbbibzyyhyksqzlcnll
+./supabase/deploy-functions.sh ubpfikqzhznlvhckfdng
 ```
 
 Or manually:
 
 ```bash
-supabase link --project-ref rxbbibzyyhyksqzlcnll
+supabase link --project-ref ubpfikqzhznlvhckfdng
 supabase secrets set STRIPE_SECRET_KEY=sk_test_xxx
 supabase functions deploy create-payment-intent
 supabase functions deploy create-checkout-session
@@ -146,7 +146,7 @@ supabase functions deploy stripe-webhook --no-verify-jwt
 
 Stripe Dashboard → **Developers → Webhooks → Add endpoint**:
 
-- **Endpoint URL:** `https://rxbbibzyyhyksqzlcnll.functions.supabase.co/stripe-webhook`
+- **Endpoint URL:** `https://ubpfikqzhznlvhckfdng.functions.supabase.co/stripe-webhook`
 - **Events:**
   - `payment_intent.succeeded`
   - `payment_intent.payment_failed`
@@ -208,7 +208,7 @@ For the deploy workflow, add these in **Settings → Secrets and variables → A
 | `SUPABASE_ACCESS_TOKEN` | secret (required) | supabase.com/dashboard/account/tokens |
 | `STRIPE_SECRET_KEY` | secret (optional) | synced to the project on deploy if set |
 | `STRIPE_WEBHOOK_SECRET` | secret (optional) | synced to the project on deploy if set |
-| `SUPABASE_PROJECT_REF` | variable (optional) | defaults to `rxbbibzyyhyksqzlcnll` |
+| `SUPABASE_PROJECT_REF` | variable (optional) | defaults to `ubpfikqzhznlvhckfdng` |
 
 App hosting (the Vite frontend) is handled by Vercel's Git integration — see below.
 

@@ -23,7 +23,7 @@ Prerequisite: run the DB migrations first (`0000_init_schema.sql`, then
 
 ```bash
 # Link the project
-supabase link --project-ref rxbbibzyyhyksqzlcnll
+supabase link --project-ref ubpfikqzhznlvhckfdng
 
 # Secrets (server-side only — never committed, never in the client)
 supabase secrets set STRIPE_SECRET_KEY=sk_live_xxx
@@ -41,7 +41,7 @@ automatically — do not set them by hand.
 
 In the Stripe Dashboard → Developers → Webhooks → Add endpoint:
 
-- URL: `https://rxbbibzyyhyksqzlcnll.functions.supabase.co/stripe-webhook`
+- URL: `https://ubpfikqzhznlvhckfdng.functions.supabase.co/stripe-webhook`
 - Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
   `checkout.session.async_payment_failed`, `checkout.session.expired`
 
@@ -51,7 +51,7 @@ re-deploy.
 ## Client env (Vercel / local `.env.local`)
 
 ```
-VITE_SUPABASE_URL=https://rxbbibzyyhyksqzlcnll.supabase.co
+VITE_SUPABASE_URL=https://ubpfikqzhznlvhckfdng.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_...
 ```
 
@@ -63,7 +63,7 @@ the link + secrets + deploy in one go:
 ```bash
 export STRIPE_SECRET_KEY=sk_test_your_own_key
 export STRIPE_WEBHOOK_SECRET=whsec_...        # after registering the webhook
-./supabase/deploy-functions.sh rxbbibzyyhyksqzlcnll
+./supabase/deploy-functions.sh ubpfikqzhznlvhckfdng
 ```
 
 ## Local testing (no deploy)
