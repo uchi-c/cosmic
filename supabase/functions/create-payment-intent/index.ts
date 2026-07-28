@@ -50,13 +50,51 @@ Deno.serve(async (req) => {
       return json({ error: 'Invalid order amount' }, 400);
     }
 
-    const intent = await stripe.paymentIntents.create({
-      amount,
-      currency: String(order.currency || 'usd').toLowerCase(),
-      metadata: { order_id: order.id },
-      receipt_email: order.customer_email || undefined,
-      automatic_payment_methods: { enabled: true },
-    });
+    // Reuse an existing, still-payable PaymentIntent for this order so retries /
+    // double-clicks / reloads don't spawn duplicate intents.
+    const existingId =
+      typeof order.stripe_session === 'string' && order.stripe_session.startsWith('pi_')
+        ? order.stripe_session
+        : null;
+    if (existingId) {
+      try {
+        const existing = await stripe.paymentIntents.retrieve(existingId);
+        if (existing.status === 'succeeded') {
+          return json({ error: 'Order is already paid' }, 409);
+        }
+        const reusable = [
+          'requires_payment_method',
+          'requires_confirmation',
+          'requires_action',
+          'processing',
+        ];
+        if (reusable.includes(existing.status) && existing.amount === amount) {
+          return json({ client_secret: existing.client_secret, amount });
+        }
+        // Stale (amount changed or unusable state) → cancel before replacing.
+        if (existing.status !== 'canceled') {
+          try {
+            await stripe.paymentIntents.cancel(existingId);
+          } catch (_) {
+            /* already gone / uncancelable — ignore and create fresh */
+          }
+        }
+      } catch (_) {
+        /* not found / retrieve failed → fall through to create */
+      }
+    }
+
+    const intent = await stripe.paymentIntents.create(
+      {
+        amount,
+        currency: String(order.currency || 'usd').toLowerCase(),
+        metadata: { order_id: order.id },
+        receipt_email: order.customer_email || undefined,
+        automatic_payment_methods: { enabled: true },
+      },
+      // Idempotent per (order, amount): repeated creates return the same intent.
+      { idempotencyKey: `order-pi-${order.id}-${amount}` }
+    );
 
     // Record the intent id against the order for reconciliation.
     await supabase

@@ -51,7 +51,7 @@ In the Stripe Dashboard → Developers → Webhooks → Add endpoint:
 - URL: `https://ubpfikqzhznlvhckfdng.functions.supabase.co/stripe-webhook`
 - Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
   `checkout.session.async_payment_failed`, `checkout.session.expired`,
-  `payment_intent.succeeded`, `payment_intent.canceled`,
+  `payment_intent.succeeded`, `payment_intent.canceled`, `charge.refunded`,
   `invoice.finalized`, `invoice.paid`, `invoice.voided`, `invoice.marked_uncollectible`
 
 Copy the signing secret (`whsec_...`) into `STRIPE_WEBHOOK_SECRET` above and

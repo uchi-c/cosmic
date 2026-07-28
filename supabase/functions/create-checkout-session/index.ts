@@ -72,6 +72,9 @@ Deno.serve(async (req) => {
       line_items,
       customer_email: order.customer_email || undefined,
       metadata: { order_id: order.id },
+      // Propagate order_id onto the underlying PaymentIntent too, so refund /
+      // payment_intent.* events can be linked back to the order.
+      payment_intent_data: { metadata: { order_id: order.id } },
       success_url: `${origin}?order_success=${encodeURIComponent(order.id)}`,
       cancel_url: `${origin}?order_cancelled=${encodeURIComponent(order.id)}`,
     });

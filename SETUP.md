@@ -162,6 +162,8 @@ Stripe Dashboard → **Developers → Webhooks → Add endpoint**:
   - `checkout.session.async_payment_succeeded`
   - `checkout.session.async_payment_failed`
   - `checkout.session.expired`
+  - `payment_intent.canceled`
+  - `charge.refunded`
   - `invoice.finalized`
   - `invoice.paid`
   - `invoice.voided`
