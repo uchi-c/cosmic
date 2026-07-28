@@ -34,6 +34,7 @@ fi
 echo "==> Deploying functions"
 supabase functions deploy create-payment-intent
 supabase functions deploy create-checkout-session
+supabase functions deploy create-invoice
 supabase functions deploy stripe-webhook --no-verify-jwt
 
 echo "==> Done. Webhook endpoint:"

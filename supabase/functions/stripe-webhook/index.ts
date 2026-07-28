@@ -78,8 +78,117 @@ Deno.serve(async (req) => {
   ]);
 
   try {
+    // ---- Invoicing events (admin-generated Stripe invoices) ----------------
+    if (event.type.startsWith('invoice.')) {
+      const inv = event.data.object as Stripe.Invoice;
+      const newStatus =
+        event.type === 'invoice.paid'
+          ? 'paid'
+          : event.type === 'invoice.finalized'
+          ? 'open'
+          : event.type === 'invoice.voided'
+          ? 'void'
+          : event.type === 'invoice.marked_uncollectible'
+          ? 'uncollectible'
+          : inv.status ?? undefined;
+
+      if (newStatus) {
+        const { error: invErr } = await supabase
+          .from('invoices')
+          .update({
+            status: newStatus,
+            hosted_invoice_url: inv.hosted_invoice_url ?? undefined,
+            invoice_pdf: inv.invoice_pdf ?? undefined,
+            amount_due: (inv.amount_due ?? 0) / 100,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('stripe_invoice_id', inv.id);
+        if (invErr) throw new Error(`invoice update failed: ${invErr.message}`);
+      }
+
+      // When an invoice for an order is paid, reflect it on the order too.
+      if (event.type === 'invoice.paid' && inv.metadata?.order_id) {
+        const { error: oErr } = await supabase
+          .from('orders')
+          .update({
+            payment_status: 'paid',
+            order_status: 'processing',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', inv.metadata.order_id);
+        if (oErr) throw new Error(`order update failed: ${oErr.message}`);
+      }
+
+      return new Response(JSON.stringify({ received: true }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Refund → mark the order refunded (link via the PaymentIntent's order_id,
+    // falling back to matching the recorded stripe_session).
+    if (event.type === 'charge.refunded') {
+      const charge = event.data.object as Stripe.Charge;
+      const piId =
+        typeof charge.payment_intent === 'string'
+          ? charge.payment_intent
+          : (charge.payment_intent as Stripe.PaymentIntent | null)?.id;
+
+      let refundOrderId: string | undefined;
+      if (piId) {
+        try {
+          const pi = await stripe.paymentIntents.retrieve(piId);
+          refundOrderId = pi.metadata?.order_id;
+        } catch (_) {
+          /* ignore — fall back to stripe_session match */
+        }
+      }
+
+      const upd = supabase
+        .from('orders')
+        .update({ payment_status: 'refunded', updated_at: new Date().toISOString() });
+      const { error: refErr } = refundOrderId
+        ? await upd.eq('id', refundOrderId)
+        : piId
+        ? await upd.eq('stripe_session', piId)
+        : { error: null };
+      if (refErr) throw new Error(`refund update failed: ${refErr.message}`);
+
+      return new Response(JSON.stringify({ received: true }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     if (SETTLE_EVENTS.has(event.type)) {
       if (orderId) {
+        // Defense in depth: confirm the amount actually paid matches the
+        // server-computed order total before marking it paid.
+        const paidAmount =
+          event.type === 'payment_intent.succeeded'
+            ? (obj as Stripe.PaymentIntent).amount_received ??
+              (obj as Stripe.PaymentIntent).amount ??
+              null
+            : (obj as Stripe.Checkout.Session).amount_total ?? null;
+
+        const { data: ord, error: ordErr } = await supabase
+          .from('orders')
+          .select('total')
+          .eq('id', orderId)
+          .single();
+        if (ordErr) throw new Error(`order read failed: ${ordErr.message}`);
+
+        const expected = ord ? Math.round(Number(ord.total) * 100) : null;
+        if (paidAmount !== null && expected !== null && paidAmount !== expected) {
+          // Not transient — acknowledge (no retry) but DON'T auto-settle; a
+          // human should reconcile the mismatch.
+          console.error(
+            `amount mismatch for order ${orderId}: paid ${paidAmount} vs expected ${expected}`
+          );
+          return new Response(
+            JSON.stringify({ received: true, warning: 'amount_mismatch' }),
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+
         const { error } = await supabase
           .from('orders')
           .update({
