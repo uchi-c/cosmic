@@ -58,6 +58,7 @@ jobs:
         run: |
           supabase functions deploy create-payment-intent   --project-ref "$PROJECT_REF"
           supabase functions deploy create-checkout-session  --project-ref "$PROJECT_REF"
+          supabase functions deploy create-invoice           --project-ref "$PROJECT_REF"
           supabase functions deploy stripe-webhook           --project-ref "$PROJECT_REF" --no-verify-jwt
 
       - name: Summary
@@ -65,6 +66,7 @@ jobs:
           echo "### Supabase functions deployed :rocket:" >> "$GITHUB_STEP_SUMMARY"
           echo "- create-payment-intent" >> "$GITHUB_STEP_SUMMARY"
           echo "- create-checkout-session" >> "$GITHUB_STEP_SUMMARY"
+          echo "- create-invoice" >> "$GITHUB_STEP_SUMMARY"
           echo "- stripe-webhook" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Webhook URL: https://$PROJECT_REF.functions.supabase.co/stripe-webhook" >> "$GITHUB_STEP_SUMMARY"

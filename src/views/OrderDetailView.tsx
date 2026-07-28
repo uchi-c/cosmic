@@ -4,12 +4,13 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Calendar, User, Phone, MapPin, Mail, CreditCard, DollarSign, Clock, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Save, Calendar, User, Phone, MapPin, Mail, CreditCard, DollarSign, Clock, ShieldCheck, Receipt, ExternalLink, AlertTriangle } from 'lucide-react';
 import { Order, OrderStatusType, PaymentStatusType } from '../types';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';
 import { Badge } from '../components/ui/Badge';
 import { format } from 'date-fns';
+import { generateInvoiceForOrder, listInvoicesForOrder, InvoiceRecord } from '../lib/invoices';
 
 interface OrderDetailViewProps {
   order: Order;
@@ -37,6 +38,36 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
 
   // Timeline records list
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
+
+  // Stripe Invoicing state
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
+
+  // Load any invoices already issued for this order
+  useEffect(() => {
+    let active = true;
+    listInvoicesForOrder(order.id).then((list) => {
+      if (active) setInvoices(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, [order.id]);
+
+  const handleGenerateInvoice = async () => {
+    setInvoiceLoading(true);
+    setInvoiceError(null);
+    try {
+      await generateInvoiceForOrder(order.id);
+      const list = await listInvoicesForOrder(order.id);
+      setInvoices(list);
+    } catch (err) {
+      setInvoiceError((err as Error).message || 'Failed to generate invoice.');
+    } finally {
+      setInvoiceLoading(false);
+    }
+  };
 
   // Pre-seed timeline based on order records
   useEffect(() => {
@@ -379,6 +410,94 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({
                 </>
               )}
             </Button>
+          </div>
+
+          {/* Stripe Invoicing panel */}
+          <div className="bg-retro-surface border-2 border-retro-border p-5 space-y-4">
+            <h4 className="text-xs font-retro-heading uppercase tracking-widest text-cream border-b border-retro-border pb-3 mb-1 flex items-center gap-2">
+              <Receipt size={13} className="text-retro-gold" />
+              [STRIPE INVOICING]
+            </h4>
+
+            {invoiceError && (
+              <div className="flex items-start gap-2 bg-retro-red/10 border-2 border-retro-red/50 p-2.5 text-[10px] text-retro-red uppercase">
+                <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                <span>{invoiceError}</span>
+              </div>
+            )}
+
+            {invoices.length > 0 ? (
+              <div className="space-y-2">
+                {invoices.map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="flex items-center justify-between gap-2 border border-retro-border bg-space-black/30 p-2.5 text-[11px]"
+                  >
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-mono font-bold text-cream">
+                        ${inv.amount_due.toFixed(2)} {inv.currency}
+                      </span>
+                      <span className="text-[9px] text-cream-muted uppercase">
+                        {format(new Date(inv.created_at), 'yyyy-MM-dd HH:mm')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge
+                        variant={
+                          inv.status === 'paid'
+                            ? 'success'
+                            : inv.status === 'void' || inv.status === 'uncollectible'
+                            ? 'danger'
+                            : 'warning'
+                        }
+                        className="text-[9px]"
+                      >
+                        {inv.status}
+                      </Badge>
+                      {inv.hosted_invoice_url && (
+                        <a
+                          href={inv.hosted_invoice_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-accent-purple hover:text-retro-gold flex items-center gap-1 font-bold"
+                          title="Open hosted invoice"
+                        >
+                          <ExternalLink size={12} />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[10px] text-cream-muted uppercase leading-relaxed">
+                No invoices issued for this order yet.
+              </p>
+            )}
+
+            <Button
+              variant="warning"
+              onClick={handleGenerateInvoice}
+              disabled={invoiceLoading}
+              className="w-full py-3 text-xs flex items-center justify-center gap-1.5 font-bold"
+            >
+              {invoiceLoading ? (
+                <>
+                  <span className="animate-spin w-4 h-4 border-2 border-space-black border-t-transparent rounded-full mr-2" />
+                  <span>GENERATING INVOICE...</span>
+                </>
+              ) : (
+                <>
+                  <Receipt size={14} />
+                  <span>GENERATE &amp; SEND INVOICE</span>
+                </>
+              )}
+            </Button>
+
+            <p className="text-[9px] text-cream-muted uppercase leading-relaxed">
+              Emails a Stripe hosted invoice (net 30 days) to{' '}
+              <span className="text-retro-gold">{order.customer_email}</span>.
+            </p>
           </div>
 
           {/* Chronological Audit Timeline logs */}

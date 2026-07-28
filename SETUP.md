@@ -37,7 +37,9 @@ Supabase Dashboard → **SQL Editor** → paste + run each file **in this order*
    trusted callers only.
 3. `supabase/migrations/0002_place_order.sql` — `place_order()` RPC: the only
    way the storefront creates an order (server-computed totals + atomic stock).
-4. `supabase/seed.sql` — demo catalog + admin allowlist row.
+4. `supabase/migrations/0003_invoices.sql` — `invoices` table (admin-read RLS)
+   for admin-generated Stripe invoices.
+5. `supabase/seed.sql` — demo catalog + admin allowlist row.
 
 > Running `0001` before `0000` is the cause of `ERROR: 42P01: relation
 > "public.products" does not exist`. Always run `0000` first.
@@ -139,8 +141,14 @@ supabase link --project-ref ubpfikqzhznlvhckfdng
 supabase secrets set STRIPE_SECRET_KEY=sk_test_xxx
 supabase functions deploy create-payment-intent
 supabase functions deploy create-checkout-session
+supabase functions deploy create-invoice
 supabase functions deploy stripe-webhook --no-verify-jwt
 ```
+
+> `create-invoice` is **admin-only** — it verifies the caller's Supabase JWT
+> against `admin_users`, so deploy it with JWT verification ON (no
+> `--no-verify-jwt`). Admins generate an invoice from an order in the console
+> (Orders → open an order → **Generate & Send Invoice**).
 
 ### 3b. Register the webhook
 
@@ -154,6 +162,10 @@ Stripe Dashboard → **Developers → Webhooks → Add endpoint**:
   - `checkout.session.async_payment_succeeded`
   - `checkout.session.async_payment_failed`
   - `checkout.session.expired`
+  - `invoice.finalized`
+  - `invoice.paid`
+  - `invoice.voided`
+  - `invoice.marked_uncollectible`
 
 Copy the endpoint's **Signing secret** (`whsec_…`), then:
 
@@ -225,7 +237,7 @@ The repo is Vite-ready (`vercel.json` present).
 
 ## 5. Verification checklist
 
-- [ ] `0000` → `0001` → `0002` → `seed.sql` run without error; `products` has rows.
+- [ ] `0000` → `0001` → `0002` → `0003` → `seed.sql` run without error; `products` has rows.
 - [ ] Storefront lists products (no red DB banner).
 - [ ] Auth user created **and** email present in `admin_users`; admin login works.
 - [ ] `VITE_*` set locally and in Vercel.

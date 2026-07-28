@@ -78,6 +78,52 @@ Deno.serve(async (req) => {
   ]);
 
   try {
+    // ---- Invoicing events (admin-generated Stripe invoices) ----------------
+    if (event.type.startsWith('invoice.')) {
+      const inv = event.data.object as Stripe.Invoice;
+      const newStatus =
+        event.type === 'invoice.paid'
+          ? 'paid'
+          : event.type === 'invoice.finalized'
+          ? 'open'
+          : event.type === 'invoice.voided'
+          ? 'void'
+          : event.type === 'invoice.marked_uncollectible'
+          ? 'uncollectible'
+          : inv.status ?? undefined;
+
+      if (newStatus) {
+        const { error: invErr } = await supabase
+          .from('invoices')
+          .update({
+            status: newStatus,
+            hosted_invoice_url: inv.hosted_invoice_url ?? undefined,
+            invoice_pdf: inv.invoice_pdf ?? undefined,
+            amount_due: (inv.amount_due ?? 0) / 100,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('stripe_invoice_id', inv.id);
+        if (invErr) throw new Error(`invoice update failed: ${invErr.message}`);
+      }
+
+      // When an invoice for an order is paid, reflect it on the order too.
+      if (event.type === 'invoice.paid' && inv.metadata?.order_id) {
+        const { error: oErr } = await supabase
+          .from('orders')
+          .update({
+            payment_status: 'paid',
+            order_status: 'processing',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', inv.metadata.order_id);
+        if (oErr) throw new Error(`order update failed: ${oErr.message}`);
+      }
+
+      return new Response(JSON.stringify({ received: true }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     if (SETTLE_EVENTS.has(event.type)) {
       if (orderId) {
         const { error } = await supabase

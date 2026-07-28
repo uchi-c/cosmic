@@ -30,9 +30,16 @@ supabase secrets set STRIPE_SECRET_KEY=sk_live_xxx
 supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_xxx   # from the step below
 
 # Deploy
+supabase functions deploy create-payment-intent
 supabase functions deploy create-checkout-session
+supabase functions deploy create-invoice           # admin-only (JWT verification ON)
 supabase functions deploy stripe-webhook --no-verify-jwt
 ```
+
+`create-invoice` generates + emails a Stripe hosted invoice for an order and is
+**admin-gated**: it resolves the caller's JWT to a user and requires that email
+to be in `admin_users`. Admins trigger it from Orders → an order →
+**Generate & Send Invoice**.
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected into functions
 automatically — do not set them by hand.
@@ -43,7 +50,9 @@ In the Stripe Dashboard → Developers → Webhooks → Add endpoint:
 
 - URL: `https://ubpfikqzhznlvhckfdng.functions.supabase.co/stripe-webhook`
 - Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
-  `checkout.session.async_payment_failed`, `checkout.session.expired`
+  `checkout.session.async_payment_failed`, `checkout.session.expired`,
+  `payment_intent.succeeded`, `payment_intent.canceled`,
+  `invoice.finalized`, `invoice.paid`, `invoice.voided`, `invoice.marked_uncollectible`
 
 Copy the signing secret (`whsec_...`) into `STRIPE_WEBHOOK_SECRET` above and
 re-deploy.
