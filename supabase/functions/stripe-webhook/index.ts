@@ -30,6 +30,14 @@ const supabase = createClient(
 const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') ?? '';
 
 Deno.serve(async (req) => {
+  // Fail CLOSED: with no signing secret, HMAC verification would run with an
+  // empty key — a value any caller can reproduce, which would let forged events
+  // mark orders paid. Refuse to process anything until the secret is set.
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET is not configured — refusing to process webhook.');
+    return new Response('Webhook secret not configured', { status: 500 });
+  }
+
   const signature = req.headers.get('stripe-signature');
   const body = await req.text();
 
