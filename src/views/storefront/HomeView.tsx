@@ -13,6 +13,7 @@ import {
   Tilt3D,
   MagneticButton,
 } from '../../components/ui/reactbits';
+import { AlienModel } from '../../components/storefront/AlienModel';
 
 interface HomeViewProps {
   products: Product[];
@@ -177,15 +178,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
       
       {/* 1. LITERARY EDITORIAL HERO BLOCK */}
       <section className="relative h-[90vh] bg-[#0A0812] border-b border-[#2A1F45] overflow-hidden flex items-center">
-        {/* Deep space visual grid backdrop overlays */}
-        <div className="absolute inset-0 z-0 opacity-40">
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0A0812] via-[#0A0812]/80 to-transparent z-10" />
-          <img
-            src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1600&auto=format&fit=crop&q=80"
-            alt="Cosmic Dept editorial backdrop"
-            className="w-full h-full object-cover object-top filter saturate-50 contrast-125"
-            referrerPolicy="no-referrer"
-          />
+        {/* Deep space nebula backdrop (self-contained — no external host) */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(155,109,255,0.28),transparent_55%),radial-gradient(circle_at_20%_80%,rgba(57,255,20,0.10),transparent_50%)]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0A0812] via-[#0A0812]/85 to-transparent z-10" />
+        </div>
+
+        {/* House model — extraterrestrial couture focal figure (right of copy) */}
+        <div className="absolute right-0 top-0 bottom-0 z-[5] w-1/2 hidden md:flex items-center justify-center pointer-events-none">
+          <AlienModel variant="hero" className="h-[88%] w-auto drop-shadow-[0_0_45px_rgba(155,109,255,0.35)] animate-floatY" />
         </div>
 
         {/* Animated cosmic starfield (theme-tinted, honours reduced-motion) */}
@@ -322,13 +323,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
       {/* 4. LUXURIOUS BRAND EDITORIAL / STORY SECTION */}
       <section className="bg-[#120F1E] border-y border-[#2A1F45] py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div className="aspect-[4/5] overflow-hidden border border-[#2A1F45]">
-            <img
-              src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop&q=80"
-              alt="COSMIC DEPT vintage tailoring tailoring"
-              className="w-full h-full object-cover filter brightness-75 contrast-110 grayscale"
-              referrerPolicy="no-referrer"
-            />
+          <div className="aspect-[4/5] overflow-hidden border border-[#2A1F45] relative bg-[radial-gradient(circle_at_50%_30%,rgba(155,109,255,0.22),#0A0812_70%)] flex items-center justify-center">
+            <Starfield className="z-0 opacity-60" density={70} speed={0.5} />
+            <AlienModel variant="editorial" className="relative z-10 h-[92%] w-auto drop-shadow-[0_0_35px_rgba(182,141,64,0.25)]" />
           </div>
 
           <div className="space-y-6">

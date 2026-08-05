@@ -17,6 +17,7 @@ const LoginView = React.lazy(() => import('./views/LoginView').then((m) => ({ de
 const DashboardView = React.lazy(() => import('./views/DashboardView').then((m) => ({ default: m.DashboardView })));
 const ProductsListView = React.lazy(() => import('./views/ProductsListView').then((m) => ({ default: m.ProductsListView })));
 const ProductFormView = React.lazy(() => import('./views/ProductFormView').then((m) => ({ default: m.ProductFormView })));
+const ProductImportView = React.lazy(() => import('./views/ProductImportView').then((m) => ({ default: m.ProductImportView })));
 const OrdersListView = React.lazy(() => import('./views/OrdersListView').then((m) => ({ default: m.OrdersListView })));
 const OrderDetailView = React.lazy(() => import('./views/OrderDetailView').then((m) => ({ default: m.OrderDetailView })));
 const SettingsView = React.lazy(() => import('./views/SettingsView').then((m) => ({ default: m.SettingsView })));
@@ -132,6 +133,27 @@ export default function App() {
 
     // Strip the query params so a refresh doesn't re-trigger the screen.
     window.history.replaceState({}, '', window.location.pathname);
+  }, []);
+
+  // Covert operator entrance: the public storefront has NO visible "sign in"
+  // affordance. The console is reached only by (a) a URL fragment known solely
+  // to the operator + client, or (b) three quick taps on the footer copyright
+  // (see Footer.tsx). This is obscurity, not the security boundary — the real
+  // gate is still Supabase Auth + the admin_users allowlist enforced server-side.
+  useEffect(() => {
+    const ADMIN_HASH = String((import.meta as any).env?.VITE_ADMIN_ACCESS_HASH || '').trim();
+    const tryHashEntry = () => {
+      if (!ADMIN_HASH) return;
+      const fragment = window.location.hash.replace(/^#/, '');
+      if (fragment && fragment === ADMIN_HASH) {
+        setViewMode('merchant');
+        // Scrub the fragment immediately so it never sits in browser history/URL bar.
+        window.history.replaceState({}, '', window.location.pathname + window.location.search);
+      }
+    };
+    tryHashEntry();
+    window.addEventListener('hashchange', tryHashEntry);
+    return () => window.removeEventListener('hashchange', tryHashEntry);
   }, []);
 
   // Load operator state & database records on initial load
@@ -398,6 +420,28 @@ export default function App() {
     }
   };
 
+  const handleBulkImport = async (
+    imports: Omit<Product, 'id' | 'created_at' | 'updated_at'>[]
+  ): Promise<{ ok: number; failed: number; errors: string[] }> => {
+    let ok = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    // Serial writes so slug/stock collisions surface per-row instead of racing.
+    for (const product of imports) {
+      try {
+        await dbService.saveProduct(product);
+        ok++;
+      } catch (err) {
+        failed++;
+        errors.push(`${product.name}: ${(err as Error).message}`);
+      }
+    }
+
+    await refreshDatabaseCollections();
+    return { ok, failed, errors };
+  };
+
   const handleDeleteProduct = async (id: string) => {
     try {
       await dbService.deleteProduct(id);
@@ -474,6 +518,7 @@ export default function App() {
               setSelectedProduct(null);
               setCurrentView('products-new');
             }}
+            onImportProducts={() => setCurrentView('products-import')}
             onEditProduct={(p) => {
               setSelectedProduct(p);
               setCurrentView('products-edit');
@@ -500,6 +545,13 @@ export default function App() {
               setCurrentView('products');
             }}
             onSave={handleSaveProduct}
+          />
+        );
+      case 'products-import':
+        return (
+          <ProductImportView
+            onBack={() => setCurrentView('products')}
+            onImport={handleBulkImport}
           />
         );
       case 'orders':
@@ -545,6 +597,7 @@ export default function App() {
       case 'products': return 'INVENTORY DATABASE REGISTRY';
       case 'products-new': return 'CATALOG DISPATCH COMMAND';
       case 'products-edit': return `EDIT ENTRY: ${selectedProduct?.name || ''}`;
+      case 'products-import': return 'BULK CATALOG UPLINK';
       case 'orders': return 'TRANSACTIONS CENTRAL AUDIT';
       case 'orders-detail': return `ORDER INVOICE ANALYSIS: #${selectedOrder?.id.slice(-6).toUpperCase()}`;
       case 'settings': return 'SYSTEM GLOBAL METRICS';

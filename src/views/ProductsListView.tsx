@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { PlusCircle, ShoppingBag } from 'lucide-react';
+import { PlusCircle, ShoppingBag, UploadCloud } from 'lucide-react';
 import { Product } from '../types';
 import { ProductTable } from '../components/admin/ProductTable';
 import { Button } from '../components/ui/Button';
@@ -12,6 +12,7 @@ import { Button } from '../components/ui/Button';
 interface ProductsListViewProps {
   products: Product[];
   onAddProduct: () => void;
+  onImportProducts: () => void;
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (id: string) => void;
   onBulkStatusChange: (ids: string[], isActive: boolean) => void;
@@ -21,6 +22,7 @@ interface ProductsListViewProps {
 export const ProductsListView: React.FC<ProductsListViewProps> = ({
   products,
   onAddProduct,
+  onImportProducts,
   onEditProduct,
   onDeleteProduct,
   onBulkStatusChange,
@@ -45,14 +47,24 @@ export const ProductsListView: React.FC<ProductsListViewProps> = ({
           </div>
         </div>
 
-        <Button
-          variant="primary"
-          onClick={onAddProduct}
-          className="w-full sm:w-auto flex items-center justify-center gap-2"
-        >
-          <PlusCircle size={15} />
-          <span>DISPATCH NEW PRODUCT</span>
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button
+            variant="secondary"
+            onClick={onImportProducts}
+            className="w-full sm:w-auto flex items-center justify-center gap-2"
+          >
+            <UploadCloud size={15} />
+            <span>BULK IMPORT</span>
+          </Button>
+          <Button
+            variant="primary"
+            onClick={onAddProduct}
+            className="w-full sm:w-auto flex items-center justify-center gap-2"
+          >
+            <PlusCircle size={15} />
+            <span>DISPATCH NEW PRODUCT</span>
+          </Button>
+        </div>
       </div>
 
       {/* Main product listings dynamic layout */}

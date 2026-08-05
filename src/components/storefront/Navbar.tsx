@@ -153,19 +153,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Search size={18} />
             </button>
 
-            {/* Merchant Access Button */}
-            <button
-              onClick={onToggleAdmin}
-              className={`text-xs px-2.5 py-1.5 border hover:bg-[#9B6DFF]/10 text-[10px] font-body-mono tracking-[0.15em] transition-colors flex items-center gap-1.5 cursor-pointer
-                ${isLoggedIn 
-                  ? 'text-[#39FF14] border-[#39FF14]/40 bg-[#39FF14]/5 hover:border-[#39FF14]' 
-                  : 'text-[#9B6DFF] border-[#2A1F45] hover:border-[#9B6DFF] bg-[#120F1E]'}`}
-              title={isLoggedIn ? "Access Authorized Admin Console" : "Access Admin Console — Sign In"}
-            >
-              <span className={`w-1.5 h-1.5 ${isLoggedIn ? 'bg-[#39FF14]' : 'bg-[#9B6DFF] animate-pulse'}`}></span>
-              <span className="hidden sm:inline">{isLoggedIn ? 'CONSOLE' : 'CONSOLE [SIGN IN]'}</span>
-              <span className="sm:hidden">{isLoggedIn ? 'CONSOLE' : 'SIGN IN'}</span>
-            </button>
+            {/* Merchant Access Button — hidden from the public. Only surfaces once
+               an operator already has an authenticated session (a quick way back
+               into the console). Cold entry is via the covert access route only. */}
+            {isLoggedIn && (
+              <button
+                onClick={onToggleAdmin}
+                className="text-xs px-2.5 py-1.5 border hover:bg-[#9B6DFF]/10 text-[10px] font-body-mono tracking-[0.15em] transition-colors flex items-center gap-1.5 cursor-pointer text-[#39FF14] border-[#39FF14]/40 bg-[#39FF14]/5 hover:border-[#39FF14]"
+                title="Access Authorized Admin Console"
+              >
+                <span className="w-1.5 h-1.5 bg-[#39FF14]"></span>
+                <span>CONSOLE</span>
+              </button>
+            )}
 
             {/* Cart Button */}
             <button
