@@ -17,6 +17,19 @@ interface FooterProps {
 export const Footer: React.FC<FooterProps> = ({ settings, onNavigate, onToggleAdmin, isLoggedIn }) => {
   const currentYear = new Date().getFullYear();
 
+  // Covert access: the copyright glyph is a decoy. Three quick taps (within 1.2s)
+  // opens the operator portal — hidden in plain sight, no visible "sign in" link.
+  const tapRef = React.useRef<{ n: number; last: number }>({ n: 0, last: 0 });
+  const handleCovertTap = () => {
+    const now = Date.now();
+    tapRef.current.n = now - tapRef.current.last < 1200 ? tapRef.current.n + 1 : 1;
+    tapRef.current.last = now;
+    if (tapRef.current.n >= 3) {
+      tapRef.current.n = 0;
+      onToggleAdmin();
+    }
+  };
+
   return (
     <footer className="bg-[#0A0812] border-t border-[#2A1F45] text-[#F8F3E9] py-16 px-4 sm:px-6 lg:px-8 font-sans selection:bg-[#9B6DFF] selection:text-[#0A0812]">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 border-b border-[#2A1F45] pb-12">
@@ -123,19 +136,29 @@ export const Footer: React.FC<FooterProps> = ({ settings, onNavigate, onToggleAd
 
       </div>
 
-      {/* Footer Bottom copyright and Console toggle link */}
+      {/* Footer Bottom copyright — doubles as the covert operator entrance.
+         No visible "sign in" affordance for the public; three quick taps on
+         the copyright line opens the portal. Once authenticated, a small
+         return-to-console link appears for convenience. */}
       <div className="max-w-7xl mx-auto pt-8 flex flex-col sm:flex-row gap-4 justify-between items-center text-[10px] text-[#F8F3E9]/45 uppercase font-body-mono">
-        <div className="text-center sm:text-left select-none">
+        <button
+          type="button"
+          onClick={handleCovertTap}
+          className="text-center sm:text-left select-none bg-transparent border-none p-0 cursor-default"
+          aria-label="Cosmic Dept"
+        >
           &copy; {currentYear} COSMIC DEPT INC. ALL PROTOCOLS RESERVED. CRAFTED FOR SECURE SPACE TRAVEL.
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onToggleAdmin}
-            className="text-[#B68D40] hover:text-[#9B6DFF] font-bold tracking-wider hover:underline transition-all uppercase cursor-pointer"
-          >
-            {isLoggedIn ? ':: ACCESS ADMIN CONSOLE' : ':: ADMIN CONSOLE [SIGN IN]'}
-          </button>
-        </div>
+        </button>
+        {isLoggedIn && (
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onToggleAdmin}
+              className="text-[#39FF14] hover:text-[#9B6DFF] font-bold tracking-wider hover:underline transition-all uppercase cursor-pointer"
+            >
+              :: ACCESS ADMIN CONSOLE
+            </button>
+          </div>
+        )}
       </div>
     </footer>
   );

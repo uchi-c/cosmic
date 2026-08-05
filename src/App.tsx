@@ -135,6 +135,27 @@ export default function App() {
     window.history.replaceState({}, '', window.location.pathname);
   }, []);
 
+  // Covert operator entrance: the public storefront has NO visible "sign in"
+  // affordance. The console is reached only by (a) a URL fragment known solely
+  // to the operator + client, or (b) three quick taps on the footer copyright
+  // (see Footer.tsx). This is obscurity, not the security boundary — the real
+  // gate is still Supabase Auth + the admin_users allowlist enforced server-side.
+  useEffect(() => {
+    const ADMIN_HASH = String((import.meta as any).env?.VITE_ADMIN_ACCESS_HASH || '').trim();
+    const tryHashEntry = () => {
+      if (!ADMIN_HASH) return;
+      const fragment = window.location.hash.replace(/^#/, '');
+      if (fragment && fragment === ADMIN_HASH) {
+        setViewMode('merchant');
+        // Scrub the fragment immediately so it never sits in browser history/URL bar.
+        window.history.replaceState({}, '', window.location.pathname + window.location.search);
+      }
+    };
+    tryHashEntry();
+    window.addEventListener('hashchange', tryHashEntry);
+    return () => window.removeEventListener('hashchange', tryHashEntry);
+  }, []);
+
   // Load operator state & database records on initial load
   useEffect(() => {
     const checkSessionAndFetch = async () => {
