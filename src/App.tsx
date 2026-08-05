@@ -17,6 +17,7 @@ const LoginView = React.lazy(() => import('./views/LoginView').then((m) => ({ de
 const DashboardView = React.lazy(() => import('./views/DashboardView').then((m) => ({ default: m.DashboardView })));
 const ProductsListView = React.lazy(() => import('./views/ProductsListView').then((m) => ({ default: m.ProductsListView })));
 const ProductFormView = React.lazy(() => import('./views/ProductFormView').then((m) => ({ default: m.ProductFormView })));
+const ProductImportView = React.lazy(() => import('./views/ProductImportView').then((m) => ({ default: m.ProductImportView })));
 const OrdersListView = React.lazy(() => import('./views/OrdersListView').then((m) => ({ default: m.OrdersListView })));
 const OrderDetailView = React.lazy(() => import('./views/OrderDetailView').then((m) => ({ default: m.OrderDetailView })));
 const SettingsView = React.lazy(() => import('./views/SettingsView').then((m) => ({ default: m.SettingsView })));
@@ -398,6 +399,28 @@ export default function App() {
     }
   };
 
+  const handleBulkImport = async (
+    imports: Omit<Product, 'id' | 'created_at' | 'updated_at'>[]
+  ): Promise<{ ok: number; failed: number; errors: string[] }> => {
+    let ok = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    // Serial writes so slug/stock collisions surface per-row instead of racing.
+    for (const product of imports) {
+      try {
+        await dbService.saveProduct(product);
+        ok++;
+      } catch (err) {
+        failed++;
+        errors.push(`${product.name}: ${(err as Error).message}`);
+      }
+    }
+
+    await refreshDatabaseCollections();
+    return { ok, failed, errors };
+  };
+
   const handleDeleteProduct = async (id: string) => {
     try {
       await dbService.deleteProduct(id);
@@ -474,6 +497,7 @@ export default function App() {
               setSelectedProduct(null);
               setCurrentView('products-new');
             }}
+            onImportProducts={() => setCurrentView('products-import')}
             onEditProduct={(p) => {
               setSelectedProduct(p);
               setCurrentView('products-edit');
@@ -500,6 +524,13 @@ export default function App() {
               setCurrentView('products');
             }}
             onSave={handleSaveProduct}
+          />
+        );
+      case 'products-import':
+        return (
+          <ProductImportView
+            onBack={() => setCurrentView('products')}
+            onImport={handleBulkImport}
           />
         );
       case 'orders':
@@ -545,6 +576,7 @@ export default function App() {
       case 'products': return 'INVENTORY DATABASE REGISTRY';
       case 'products-new': return 'CATALOG DISPATCH COMMAND';
       case 'products-edit': return `EDIT ENTRY: ${selectedProduct?.name || ''}`;
+      case 'products-import': return 'BULK CATALOG UPLINK';
       case 'orders': return 'TRANSACTIONS CENTRAL AUDIT';
       case 'orders-detail': return `ORDER INVOICE ANALYSIS: #${selectedOrder?.id.slice(-6).toUpperCase()}`;
       case 'settings': return 'SYSTEM GLOBAL METRICS';

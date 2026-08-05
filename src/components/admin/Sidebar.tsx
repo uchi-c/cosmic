@@ -6,7 +6,7 @@
 import React from 'react';
 import { LayoutDashboard, ShoppingBag, ShoppingCart, Settings, LogOut, Terminal } from 'lucide-react';
 
-export type AdminViewType = 'dashboard' | 'products' | 'products-new' | 'products-edit' | 'orders' | 'orders-detail' | 'settings';
+export type AdminViewType = 'dashboard' | 'products' | 'products-new' | 'products-edit' | 'products-import' | 'orders' | 'orders-detail' | 'settings';
 
 interface SidebarProps {
   currentView: AdminViewType;
@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onLog
         {links.map((link) => {
           const Icon = link.icon;
           const isActive = currentView === link.view || 
-            (link.view === 'products' && (currentView === 'products-new' || currentView === 'products-edit')) ||
+            (link.view === 'products' && (currentView === 'products-new' || currentView === 'products-edit' || currentView === 'products-import')) ||
             (link.view === 'orders' && currentView === 'orders-detail');
             
           return (
