@@ -644,6 +644,7 @@ export default function App() {
       <div className={`min-h-screen bg-[#0A0812] flex flex-col text-[#F8F3E9] selection:bg-[#9B6DFF] selection:text-[#0A0812] storefront-portal theme-${activeCategory}`}>
         <Navbar
           activePage={selectedStorefrontProduct ? 'product-detail' : storefrontPage}
+          activeCategory={activeCategory}
           onNavigate={handleStorefrontNavigate}
           onBack={handleBack}
           cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { ArrowRight, ShoppingCart, Sparkles, Eye, Compass } from 'lucide-react';
 import { Product, CategoryType } from '../../types';
 import {
@@ -12,8 +12,13 @@ import {
   ScrollReveal,
   Tilt3D,
   MagneticButton,
+  AccordionGallery,
 } from '../../components/ui/reactbits';
 import { AlienModel } from '../../components/storefront/AlienModel';
+
+// three.js is heavy and purely decorative here — code-split so it never
+// blocks the hero's initial paint.
+const ASCIIText = React.lazy(() => import('../../components/ui/reactbits/ASCIIText'));
 
 interface HomeViewProps {
   products: Product[];
@@ -196,6 +201,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <div className="absolute top-1/4 right-1/4 w-[35rem] h-[35rem] bg-[#9B6DFF]/10 rounded-full blur-[120px] pointer-events-none z-0 animate-aurora" />
         <div className="absolute bottom-0 left-1/4 w-[26rem] h-[26rem] bg-[var(--theme-accent)]/10 rounded-full blur-[130px] pointer-events-none z-0 animate-aurora" style={{ animationDelay: '3s' }} />
 
+        {/* ASCII signature mark — small decorative accent beside the house model,
+           not a replacement for it. Code-split (three.js) via React.lazy so it
+           never delays the hero's first paint. */}
+        <div className="hidden lg:block absolute bottom-8 right-8 z-[6] w-64 h-28 pointer-events-none opacity-80">
+          <Suspense fallback={null}>
+            <ASCIIText text="COSMIC_DEPT" asciiFontSize={6} textFontSize={140} planeBaseHeight={6} enableWaves />
+          </Suspense>
+        </div>
+
         {/* Hero Copy Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full select-none">
           <ScrollReveal direction="up" distance={24}>
@@ -318,6 +332,32 @@ export const HomeView: React.FC<HomeViewProps> = ({
             No items currently cataloged in database buffer.
           </div>
         )}
+      </section>
+
+      {/* 3.5. LOOKBOOK SECTOR GALLERY — hover-expand panel per department */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center space-y-3 mb-12">
+          <span className="text-[10px] font-body-mono text-[#B68D40] tracking-[0.25em] font-bold uppercase block">
+            :: FIELD LOOKBOOK ::
+          </span>
+          <h3 className="font-serif text-3xl text-[#F8F3E9] tracking-wider italic">
+            Survey the Sectors
+          </h3>
+        </div>
+
+        <AccordionGallery
+          items={categoriesList.map((cat) => ({ image: cat.image, label: cat.label, alt: `${cat.label} lookbook` }))}
+          onSelect={(_item, i) => onNavigate('shop', categoriesList[i].value)}
+          defaultIndex={2}
+          expandRatio={0.42}
+          height={420}
+          gap={8}
+          radius={4}
+          accentColor="#9B6DFF"
+          overlayColor="#0A0812"
+          textColor="#F8F3E9"
+          trigger="hover"
+        />
       </section>
 
       {/* 4. LUXURIOUS BRAND EDITORIAL / STORY SECTION */}

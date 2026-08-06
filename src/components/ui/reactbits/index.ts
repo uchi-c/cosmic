@@ -14,3 +14,8 @@ export { CountUp } from './CountUp';
 export { SpotlightCard } from './SpotlightCard';
 export { ScrollReveal } from './ScrollReveal';
 export { MagneticButton } from './MagneticButton';
+export { default as PillNav } from './PillNav';
+export type { PillNavItem } from './PillNav';
+export { default as ASCIIText } from './ASCIIText';
+export { default as AccordionGallery } from './AccordionGallery';
+export type { AccordionGalleryItem } from './AccordionGallery';

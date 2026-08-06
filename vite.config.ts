@@ -23,6 +23,8 @@ export default defineConfig(() => {
             if (id.includes('motion')) return 'motion';
             if (id.includes('@supabase')) return 'supabase';
             if (id.includes('lucide-react')) return 'icons';
+            if (id.includes('/three/') || id.includes('\\three\\')) return 'three';
+            if (id.includes('gsap')) return 'gsap';
             // React (+ react-dom, scheduler) stays with the core vendor chunk to
             // avoid a circular chunk graph; motion/supabase/stripe depend on it
             // one-way.
