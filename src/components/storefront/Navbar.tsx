@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { ShoppingBag, Search, Menu, X, ShieldAlert, ArrowLeft, Home } from 'lucide-react';
 import { CategoryType } from '../../types';
-import { PillNav } from '../ui/reactbits';
+import { PillNav, LineSidebar } from '../ui/reactbits';
 
 interface NavbarProps {
   activePage: 'home' | 'shop' | 'product-detail' | 'checkout';
@@ -213,22 +213,34 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       )}
 
-      {/* Mobile Drawer Navigation overlay */}
+      {/* Mobile Drawer Navigation overlay — React Bits LineSidebar (mobile-only;
+         desktop nav is the PillNav above). Proximity shift is a nicety for
+         drag-to-scan-with-thumb; every entry is a normal tap target regardless. */}
       {mobileMenuOpen && (
-        <div className="lg:hidden absolute top-full left-0 w-full bg-[#120F1E]/98 border-b border-[#2A1F45] z-40 shadow-2xl animate-fadeIn">
-          <div className="px-4 pt-4 pb-6 space-y-3">
-            <span className="text-[9px] tracking-[0.25em] text-[#B68D40] font-bold block uppercase border-b border-[#2A1F45] pb-2">
+        <div className="lg:hidden absolute top-full left-0 w-full bg-[#120F1E]/98 border-b border-[#2A1F45] z-40 shadow-2xl animate-fadeIn max-h-[75vh] overflow-y-auto">
+          <div className="px-6 pt-4 pb-6">
+            <span className="text-[9px] tracking-[0.25em] text-[#B68D40] font-bold block uppercase border-b border-[#2A1F45] pb-2 mb-1">
               SECTORS / CLASSIFIED CATALOGS
             </span>
-            {categories.map((cat) => (
-              <button
-                key={cat.value}
-                onClick={() => handleCategoryClick(cat.value)}
-                className="block w-full text-left py-2 text-sm tracking-widest text-[#F8F3E9]/90 hover:text-[#9B6DFF] transition-colors uppercase font-body-mono border-b border-[#2A1F45]/30"
-              >
-                {cat.label}
-              </button>
-            ))}
+            <LineSidebar
+              items={categories.map((cat) => cat.label)}
+              onItemClick={(index) => handleCategoryClick(categories[index].value)}
+              accentColor="#9B6DFF"
+              textColor="rgba(248, 243, 233, 0.55)"
+              markerColor="#2A1F45"
+              showIndex
+              showMarker
+              markerLength={36}
+              markerGap={10}
+              tickScale={0.5}
+              fontSize={0.95}
+              itemGap={14}
+              proximityRadius={90}
+              maxShift={14}
+              smoothing={90}
+              falloff="smooth"
+              className="font-body-mono uppercase tracking-widest"
+            />
           </div>
         </div>
       )}

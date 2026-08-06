@@ -19,3 +19,4 @@ export type { PillNavItem } from './PillNav';
 export { default as ASCIIText } from './ASCIIText';
 export { default as AccordionGallery } from './AccordionGallery';
 export type { AccordionGalleryItem } from './AccordionGallery';
+export { default as LineSidebar } from './LineSidebar';
