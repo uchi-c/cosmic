@@ -6,9 +6,11 @@
 import React, { useState } from 'react';
 import { ShoppingBag, Search, Menu, X, ShieldAlert, ArrowLeft, Home } from 'lucide-react';
 import { CategoryType } from '../../types';
+import { PillNav, LineSidebar } from '../ui/reactbits';
 
 interface NavbarProps {
   activePage: 'home' | 'shop' | 'product-detail' | 'checkout';
+  activeCategory?: CategoryType | 'all';
   onNavigate: (page: 'home' | 'shop' | 'checkout', category?: CategoryType | 'all') => void;
   onBack?: () => void;
   cartCount: number;
@@ -20,6 +22,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   activePage,
+  activeCategory,
   onNavigate,
   onBack,
   cartCount,
@@ -96,11 +99,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* Logo - Centered on Mobile, Left-aligned on Desktop */}
-          <div className="flex-1 lg:flex-none flex justify-center lg:justify-start">
+          {/* Logo — mobile/tablet only; desktop uses PillNav's own logo swatch */}
+          <div className="flex-1 lg:hidden flex justify-center">
             <button
               onClick={() => onNavigate('home')}
-              className="group text-center lg:text-left focus:outline-none cursor-pointer select-none flex items-center gap-2.5"
+              className="group text-center focus:outline-none cursor-pointer select-none flex items-center gap-2.5"
             >
               <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[#2A1F45] group-hover:border-[#9B6DFF] transition-colors flex-shrink-0 bg-[#0A0812]">
                 <img src="/logo.jpg" alt="COSMIC DEPT Logo" className="w-full h-full object-cover filter brightness-110" />
@@ -116,18 +119,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex space-x-8 xl:space-x-10">
-            {categories.map((cat) => (
-              <button
-                key={cat.value}
-                onClick={() => handleCategoryClick(cat.value)}
-                className="text-xs tracking-[0.2em] font-medium text-[#F8F3E9]/80 hover:text-[#B68D40] uppercase transition-colors relative py-2 cursor-pointer font-body-mono"
-              >
-                {cat.label}
-              </button>
-            ))}
-          </nav>
+          {/* Desktop Navigation — React Bits PillNav (logo + category pills) */}
+          <div className="hidden lg:block">
+            <PillNav
+              logo="/logo.jpg"
+              logoAlt="COSMIC DEPT Logo"
+              items={categories.map((cat) => ({ label: cat.label, value: cat.value }))}
+              activeValue={activePage === 'shop' || activePage === 'checkout' ? activeCategory : undefined}
+              onSelect={(value) => handleCategoryClick(value as CategoryType | 'all')}
+              onLogoClick={() => onNavigate('home')}
+              baseColor="#9B6DFF"
+              pillColor="#F8F3E9"
+              pillTextColor="#0A0812"
+              hoveredPillTextColor="#F8F3E9"
+              ease="power3.out"
+            />
+          </div>
 
           {/* Right Action Icons (Search, Admin portal switch, Cart) */}
           <div className="flex items-center space-x-3 sm:space-x-5">
@@ -206,22 +213,34 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       )}
 
-      {/* Mobile Drawer Navigation overlay */}
+      {/* Mobile Drawer Navigation overlay — React Bits LineSidebar (mobile-only;
+         desktop nav is the PillNav above). Proximity shift is a nicety for
+         drag-to-scan-with-thumb; every entry is a normal tap target regardless. */}
       {mobileMenuOpen && (
-        <div className="lg:hidden absolute top-full left-0 w-full bg-[#120F1E]/98 border-b border-[#2A1F45] z-40 shadow-2xl animate-fadeIn">
-          <div className="px-4 pt-4 pb-6 space-y-3">
-            <span className="text-[9px] tracking-[0.25em] text-[#B68D40] font-bold block uppercase border-b border-[#2A1F45] pb-2">
+        <div className="lg:hidden absolute top-full left-0 w-full bg-[#120F1E]/98 border-b border-[#2A1F45] z-40 shadow-2xl animate-fadeIn max-h-[75vh] overflow-y-auto">
+          <div className="px-6 pt-4 pb-6">
+            <span className="text-[9px] tracking-[0.25em] text-[#B68D40] font-bold block uppercase border-b border-[#2A1F45] pb-2 mb-1">
               SECTORS / CLASSIFIED CATALOGS
             </span>
-            {categories.map((cat) => (
-              <button
-                key={cat.value}
-                onClick={() => handleCategoryClick(cat.value)}
-                className="block w-full text-left py-2 text-sm tracking-widest text-[#F8F3E9]/90 hover:text-[#9B6DFF] transition-colors uppercase font-body-mono border-b border-[#2A1F45]/30"
-              >
-                {cat.label}
-              </button>
-            ))}
+            <LineSidebar
+              items={categories.map((cat) => cat.label)}
+              onItemClick={(index) => handleCategoryClick(categories[index].value)}
+              accentColor="#9B6DFF"
+              textColor="rgba(248, 243, 233, 0.55)"
+              markerColor="#2A1F45"
+              showIndex
+              showMarker
+              markerLength={36}
+              markerGap={10}
+              tickScale={0.5}
+              fontSize={0.95}
+              itemGap={14}
+              proximityRadius={90}
+              maxShift={14}
+              smoothing={90}
+              falloff="smooth"
+              className="font-body-mono uppercase tracking-widest"
+            />
           </div>
         </div>
       )}
