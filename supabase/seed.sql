@@ -77,3 +77,9 @@ on conflict (slug) do nothing;
 insert into public.admin_users (email, role)
 values ('uchichinyama@gmail.com', 'super_admin')
 on conflict (email) do nothing;
+
+-- Client operator — editor role: can manage products/orders, cannot manage
+-- other admin_users rows or settings reserved for super_admin.
+insert into public.admin_users (email, role)
+values ('cosmicdeptzm@gmail.com', 'editor')
+on conflict (email) do nothing;
