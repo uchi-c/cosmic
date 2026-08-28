@@ -355,7 +355,13 @@ export const dbService = {
     notes?: string | null;
   }): Promise<Order> {
     const now = new Date().toISOString();
-    const orderId = `ord-${Math.floor(100000 + Math.random() * 900000)}`;
+    // High-entropy id (crypto.getRandomValues, not Math.random) — matches the
+    // hardening applied to the server-side place_order() RPC; see
+    // supabase/migrations/0004_fix_order_id_entropy.sql for why a short
+    // predictable id is unsafe once it's used to look up/pay for an order.
+    const orderIdBytes = new Uint8Array(16);
+    crypto.getRandomValues(orderIdBytes);
+    const orderId = `ord-${Array.from(orderIdBytes, (b) => b.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
 
     let verifiedItems: OrderItem[] = [];
     let calculatedSubtotal = 0;

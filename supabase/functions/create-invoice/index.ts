@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     const { data: adminRow } = await admin
       .from('admin_users')
       .select('email')
-      .ilike('email', email)
+      .eq('email', email)
       .maybeSingle();
     if (!adminRow) return json({ error: 'Forbidden: operator is not an admin' }, 403);
 
