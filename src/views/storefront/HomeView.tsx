@@ -105,8 +105,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </span>
         )}
 
-        {/* Hover image gallery layout */}
-        <div className="aspect-[4/5] bg-[#0A0812] relative overflow-hidden shrink-0">
+        {/* Product image — tappable on mobile (no hover to rely on) */}
+        <div
+          className="aspect-[4/5] bg-[#0A0812] relative overflow-hidden shrink-0 cursor-pointer md:cursor-default"
+          onClick={() => onViewProduct(product)}
+        >
           {product.images && product.images.length > 0 ? (
             <img
               src={product.images[0]}
@@ -120,19 +123,21 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
           )}
 
-          {/* Quick Action Overlays */}
-          <div className="absolute inset-0 bg-[#0A0812]/70 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center gap-3 p-4">
+          {/* Quick Action Overlays — desktop only. Pure CSS :hover never sticks
+             on touch devices (tap simulates hover then drops it), so mobile
+             gets a persistent icon instead below. */}
+          <div className="hidden md:flex absolute inset-0 bg-[#0A0812]/70 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex-col justify-center items-center gap-3 p-4">
             <button
-              onClick={() => onViewProduct(product)}
+              onClick={(e) => { e.stopPropagation(); onViewProduct(product); }}
               className="w-full py-2.5 bg-[#F8F3E9] text-[#0A0812] font-body-mono text-[10px] tracking-widest font-bold uppercase flex items-center justify-center gap-1.5 hover:bg-[#B68D40] hover:text-[#0A0812] transition-colors cursor-pointer"
             >
               <Eye size={13} />
               <span>INSPECT DETAILS</span>
             </button>
-            
+
             {!isOutOfStock ? (
               <button
-                onClick={() => onQuickAdd(product, product.sizes[0], product.colors[0])}
+                onClick={(e) => { e.stopPropagation(); onQuickAdd(product, product.sizes[0], product.colors[0]); }}
                 className="w-full py-2.5 bg-transparent border border-[#9B6DFF] text-[#9B6DFF] font-body-mono text-[10px] tracking-widest font-bold uppercase flex items-center justify-center gap-1.5 hover:bg-[#9B6DFF] hover:text-[#0A0812] transition-colors cursor-pointer"
               >
                 <ShoppingCart size={13} />
@@ -144,6 +149,17 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </div>
             )}
           </div>
+
+          {/* Mobile quick-add — always visible, no hover/tap-reveal needed */}
+          {!isOutOfStock && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onQuickAdd(product, product.sizes[0], product.colors[0]); }}
+              className="md:hidden absolute bottom-2.5 right-2.5 p-2.5 bg-[#0A0812]/85 border border-[#9B6DFF]/50 text-[#9B6DFF] active:bg-[#9B6DFF] active:text-[#0A0812] transition-colors cursor-pointer"
+              aria-label="Quick add to bag"
+            >
+              <ShoppingCart size={15} />
+            </button>
+          )}
         </div>
 
         {/* Product specs row */}
