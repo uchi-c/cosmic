@@ -23,7 +23,7 @@ const ASCIIText = React.lazy(() => import('../../components/ui/reactbits/ASCIITe
 interface HomeViewProps {
   products: Product[];
   onNavigate: (page: 'home' | 'shop' | 'checkout', category?: CategoryType | 'all') => void;
-  onQuickAdd: (product: Product, size?: string, color?: string) => void;
+  onQuickAdd: (product: Product, qty: number, size?: string, color?: string) => void;
   onViewProduct: (product: Product) => void;
 }
 
@@ -137,7 +137,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
             {!isOutOfStock ? (
               <button
-                onClick={(e) => { e.stopPropagation(); onQuickAdd(product, product.sizes[0], product.colors[0]); }}
+                onClick={(e) => { e.stopPropagation(); onQuickAdd(product, 1, product.sizes[0], product.colors[0]); }}
                 className="w-full py-2.5 bg-transparent border border-[#9B6DFF] text-[#9B6DFF] font-body-mono text-[10px] tracking-widest font-bold uppercase flex items-center justify-center gap-1.5 hover:bg-[#9B6DFF] hover:text-[#0A0812] transition-colors cursor-pointer"
               >
                 <ShoppingCart size={13} />
@@ -153,7 +153,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           {/* Mobile quick-add — always visible, no hover/tap-reveal needed */}
           {!isOutOfStock && (
             <button
-              onClick={(e) => { e.stopPropagation(); onQuickAdd(product, product.sizes[0], product.colors[0]); }}
+              onClick={(e) => { e.stopPropagation(); onQuickAdd(product, 1, product.sizes[0], product.colors[0]); }}
               className="md:hidden absolute bottom-2.5 right-2.5 p-2.5 bg-[#0A0812]/85 border border-[#9B6DFF]/50 text-[#9B6DFF] active:bg-[#9B6DFF] active:text-[#0A0812] transition-colors cursor-pointer"
               aria-label="Quick add to bag"
             >

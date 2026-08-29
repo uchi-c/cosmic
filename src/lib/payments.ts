@@ -3,65 +3,41 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { Stripe } from '@stripe/stripe-js';
 import { supabase, isSupabaseConfigured } from './supabase';
 
-/** Card rails that route through Stripe. */
-export const STRIPE_RAILS = ['Stripe Credit Card', 'Apple Pay'];
+/**
+ * Card rails that route through Flutterwave's hosted checkout. Stripe cannot
+ * activate a live merchant account for a Zambia-registered business (Zambia
+ * isn't on Stripe's supported-country list), so international card payments
+ * go through Flutterwave instead — it's licensed to operate with Zambian
+ * merchants and processes Visa/Mastercard/Amex plus Apple Pay/Google Pay on
+ * its hosted checkout page.
+ */
+export const CARD_RAILS = ['Card Payment', 'Apple Pay'];
 
-export const isStripeRail = (method: string) => STRIPE_RAILS.includes(method);
-
-const publishableKey = String(
-  ((import.meta as any).env || {}).VITE_STRIPE_PUBLISHABLE_KEY || ''
-);
-
-/** True when the on-site Payment Element can be used (pk + Supabase present). */
-export const isStripeConfigured = (): boolean =>
-  isSupabaseConfigured() && publishableKey.startsWith('pk_');
-
-// Load Stripe.js once, lazily — the SDK is dynamically imported so it lands in
-// its own chunk and never ships in the initial storefront payload.
-let stripePromise: Promise<Stripe | null> | null = null;
-export const getStripe = (): Promise<Stripe | null> => {
-  if (!publishableKey) return Promise.resolve(null);
-  if (!stripePromise) {
-    stripePromise = import('@stripe/stripe-js').then((m) =>
-      m.loadStripe(publishableKey)
-    );
-  }
-  return stripePromise;
-};
+export const isCardRail = (method: string) => CARD_RAILS.includes(method);
 
 /**
- * Creates a Stripe PaymentIntent for a pending order and returns its
- * client_secret. The amount + currency are computed server-side by the
- * `create-payment-intent` edge function — the browser only passes the order id.
+ * True when the redirect-based card flow can be used. Unlike Stripe's
+ * on-site Payment Element, Flutterwave's Standard checkout needs no
+ * publishable key in the client bundle — the payment link is created
+ * entirely server-side, so the only prerequisite is Supabase being reachable
+ * to invoke the edge function.
  */
-export const createPaymentIntent = async (orderId: string): Promise<string> => {
+export const isCardPaymentConfigured = (): boolean => isSupabaseConfigured();
+
+/**
+ * Creates a Flutterwave Standard payment for a pending order and returns its
+ * hosted checkout URL. The amount + currency are computed server-side by the
+ * `create-flutterwave-payment` edge function — the browser only passes the
+ * order id (and the origin, so the function can build a return URL).
+ */
+export const startCardPayment = async (orderId: string): Promise<string> => {
   if (!isSupabaseConfigured() || !supabase) {
     throw new Error('Live payments require Supabase to be configured.');
   }
-  const { data, error } = await supabase.functions.invoke('create-payment-intent', {
-    body: { order_id: orderId },
-  });
-  if (error) throw new Error(error.message || 'Could not reach the payment gateway.');
-  if (!data?.client_secret) {
-    throw new Error((data as any)?.error || 'Payment gateway did not return a client secret.');
-  }
-  return data.client_secret as string;
-};
-
-/**
- * Hosted Stripe Checkout (redirect) — kept as an alternative to the on-site
- * Payment Element. Returns the redirect URL.
- */
-export const startStripeCheckout = async (orderId: string): Promise<string> => {
-  if (!isSupabaseConfigured() || !supabase) {
-    throw new Error('Live payments require Supabase to be configured.');
-  }
-  const origin = window.location.origin;
-  const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-    body: { order_id: orderId, success_url: origin, cancel_url: origin },
+  const { data, error } = await supabase.functions.invoke('create-flutterwave-payment', {
+    body: { order_id: orderId, redirect_origin: window.location.origin },
   });
   if (error) throw new Error(error.message || 'Could not reach the payment gateway.');
   if (!data?.url) {

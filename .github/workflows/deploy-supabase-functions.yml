@@ -1,12 +1,17 @@
 name: Deploy Supabase Functions
 
-# Auto-deploys the Stripe edge functions whenever they change on main
+# Auto-deploys the payment edge functions whenever they change on main
 # (or run manually via the Actions tab).
 #
 # Required GitHub secrets (Settings → Secrets and variables → Actions):
 #   SUPABASE_ACCESS_TOKEN   — supabase.com/dashboard/account/tokens
 # Optional secrets (if set, they are synced to the project on each deploy):
-#   STRIPE_SECRET_KEY       — sk_test_… / sk_live_…
+#   FLW_SECRET_KEY          — FLWSECK_TEST-… / FLWSECK-…   (Flutterwave — live checkout)
+#   FLW_SECRET_HASH         — your own random string, set to match the
+#                             Flutterwave dashboard's webhook secret hash
+#   STRIPE_SECRET_KEY       — sk_test_… / sk_live_…   (legacy — admin invoicing only;
+#                             Stripe cannot activate a live merchant account for a
+#                             Zambia-registered business, so checkout no longer uses it)
 #   STRIPE_WEBHOOK_SECRET   — whsec_…
 # Optional repo variable (Settings → Variables): SUPABASE_PROJECT_REF
 #   defaults to the project below if unset.
@@ -29,6 +34,8 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'ubpfikqzhznlvhckfdng' }}
+      FLW_SECRET_KEY: ${{ secrets.FLW_SECRET_KEY }}
+      FLW_SECRET_HASH: ${{ secrets.FLW_SECRET_HASH }}
       STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
       STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
     steps:
@@ -46,7 +53,15 @@ jobs:
             exit 1
           fi
 
-      - name: Sync Stripe secrets (optional)
+      - name: Sync Flutterwave secrets (optional)
+        if: ${{ env.FLW_SECRET_KEY != '' }}
+        run: |
+          supabase secrets set "FLW_SECRET_KEY=$FLW_SECRET_KEY" --project-ref "$PROJECT_REF"
+          if [ -n "$FLW_SECRET_HASH" ]; then
+            supabase secrets set "FLW_SECRET_HASH=$FLW_SECRET_HASH" --project-ref "$PROJECT_REF"
+          fi
+
+      - name: Sync Stripe secrets (optional — legacy, admin invoicing only)
         if: ${{ env.STRIPE_SECRET_KEY != '' }}
         run: |
           supabase secrets set "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY" --project-ref "$PROJECT_REF"
@@ -56,17 +71,22 @@ jobs:
 
       - name: Deploy functions
         run: |
-          supabase functions deploy create-payment-intent   --project-ref "$PROJECT_REF"
-          supabase functions deploy create-checkout-session  --project-ref "$PROJECT_REF"
-          supabase functions deploy create-invoice           --project-ref "$PROJECT_REF"
-          supabase functions deploy stripe-webhook           --project-ref "$PROJECT_REF" --no-verify-jwt
+          supabase functions deploy create-flutterwave-payment --project-ref "$PROJECT_REF"
+          supabase functions deploy flutterwave-webhook         --project-ref "$PROJECT_REF" --no-verify-jwt
+          supabase functions deploy create-payment-intent       --project-ref "$PROJECT_REF"
+          supabase functions deploy create-checkout-session     --project-ref "$PROJECT_REF"
+          supabase functions deploy create-invoice              --project-ref "$PROJECT_REF"
+          supabase functions deploy stripe-webhook              --project-ref "$PROJECT_REF" --no-verify-jwt
 
       - name: Summary
         run: |
           echo "### Supabase functions deployed :rocket:" >> "$GITHUB_STEP_SUMMARY"
-          echo "- create-payment-intent" >> "$GITHUB_STEP_SUMMARY"
-          echo "- create-checkout-session" >> "$GITHUB_STEP_SUMMARY"
-          echo "- create-invoice" >> "$GITHUB_STEP_SUMMARY"
-          echo "- stripe-webhook" >> "$GITHUB_STEP_SUMMARY"
+          echo "- create-flutterwave-payment" >> "$GITHUB_STEP_SUMMARY"
+          echo "- flutterwave-webhook" >> "$GITHUB_STEP_SUMMARY"
+          echo "- create-payment-intent (legacy)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- create-checkout-session (legacy)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- create-invoice (admin invoicing — still Stripe)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- stripe-webhook (legacy)" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Webhook URL: https://$PROJECT_REF.functions.supabase.co/stripe-webhook" >> "$GITHUB_STEP_SUMMARY"
+          echo "Flutterwave webhook URL: https://$PROJECT_REF.functions.supabase.co/flutterwave-webhook" >> "$GITHUB_STEP_SUMMARY"
+          echo "Stripe webhook URL: https://$PROJECT_REF.functions.supabase.co/stripe-webhook" >> "$GITHUB_STEP_SUMMARY"

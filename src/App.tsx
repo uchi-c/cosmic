@@ -112,6 +112,8 @@ export default function App() {
   }, [operatorEmail]);
 
   // Detect return from hosted Stripe Checkout (?order_success / ?order_cancelled)
+  // — legacy path, no longer reachable from checkout (Stripe can't activate a
+  // live Zambia merchant account) but left in place in case it's ever re-used.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const success = params.get('order_success');
@@ -132,6 +134,31 @@ export default function App() {
     }
 
     // Strip the query params so a refresh doesn't re-trigger the screen.
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
+
+  // Detect return from hosted Flutterwave checkout (?flw_return=<order id>).
+  // Flutterwave appends its own `status` param (successful/cancelled/failed) —
+  // that's a UX hint only; the webhook (verified independently against
+  // Flutterwave's API) is the sole source of truth for payment_status.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('flw_return');
+    if (!orderId) return;
+
+    const flwStatus = params.get('status');
+
+    setViewMode('storefront');
+    setSelectedStorefrontProduct(null);
+
+    if (flwStatus === 'successful') {
+      setCheckoutReturn({ status: 'success', orderId });
+      setCartItems([]);
+      localStorage.removeItem('cosmic_cart');
+    } else {
+      setCheckoutReturn({ status: 'cancelled', orderId });
+    }
+
     window.history.replaceState({}, '', window.location.pathname);
   }, []);
 

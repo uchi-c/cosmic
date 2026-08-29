@@ -15,18 +15,17 @@ export default defineConfig(() => {
       rollupOptions: {
         output: {
           // Split heavy vendors into cacheable chunks. Anything only reachable
-          // via dynamic import (Stripe, the admin console) stays in its own
+          // via dynamic import (the admin console) stays in its own
           // lazily-loaded chunk automatically.
           manualChunks(id: string) {
             if (!id.includes('node_modules')) return undefined;
-            if (id.includes('@stripe')) return 'stripe';
             if (id.includes('motion')) return 'motion';
             if (id.includes('@supabase')) return 'supabase';
             if (id.includes('lucide-react')) return 'icons';
             if (id.includes('/three/') || id.includes('\\three\\')) return 'three';
             if (id.includes('gsap')) return 'gsap';
             // React (+ react-dom, scheduler) stays with the core vendor chunk to
-            // avoid a circular chunk graph; motion/supabase/stripe depend on it
+            // avoid a circular chunk graph; motion/supabase depend on it
             // one-way.
             return 'vendor';
           },
