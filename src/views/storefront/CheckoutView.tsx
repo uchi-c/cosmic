@@ -6,15 +6,8 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Truck, ShoppingBag, CheckCircle, ArrowRight, HelpCircle, ArrowLeft } from 'lucide-react';
 import { Order, OrderItem, CategoryType } from '../../types';
-import { dbService, isSupabaseConfigured } from '../../lib/supabase';
-import { isStripeRail, isStripeConfigured, createPaymentIntent, startStripeCheckout } from '../../lib/payments';
-
-// Lazy — the Stripe React SDK only loads when a shopper reaches the pay step.
-const StripePaymentPanel = React.lazy(() =>
-  import('../../components/storefront/StripePaymentPanel').then((m) => ({
-    default: m.StripePaymentPanel,
-  }))
-);
+import { dbService } from '../../lib/supabase';
+import { isCardRail, isCardPaymentConfigured, startCardPayment } from '../../lib/payments';
 
 interface CheckoutViewProps {
   cartItems: OrderItem[];
@@ -33,23 +26,19 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
   const [customerPhone, setCustomerPhone] = useState('');
   const [country, setCountry] = useState('Zambia');
   const [address, setAddress] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('Stripe Credit Card');
+  const [paymentMethod, setPaymentMethod] = useState('Card Payment');
   const [notes, setNotes] = useState('');
 
   // Form error and submission success state tracker
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
-  // On-site Stripe Payment Element step (order created + intent ready).
-  const [stripePayment, setStripePayment] = useState<
-    { clientSecret: string; order: Order } | null
-  >(null);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const total = subtotal; // Complimentary shipping is 0
 
   const countries = ['Zambia', 'South Africa', 'United States', 'United Kingdom', 'Japan', 'Germany', 'Australia', 'Canada'];
-  const paymentOptions = ['Stripe Credit Card', 'Airtel Mobile Money', 'MTN Mobile Money', 'Apple Pay', 'Cryptocurrency Wallet'];
+  const paymentOptions = ['Card Payment', 'Apple Pay', 'Airtel Mobile Money', 'MTN Mobile Money', 'Cryptocurrency Wallet'];
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -98,28 +87,19 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
 
       // 3. Payment.
       //    SECURITY: a browser must never certify its own payment. Card rails in
-      //    live mode redirect to hosted Stripe Checkout; only the Stripe webhook
-      //    may flip the order to 'paid'. The offline sandbox simulates a
-      //    settlement (no real money, no server). Non-card rails stay pending.
-      const cardRail = isStripeRail(paymentMethod);
+      //    live mode redirect to hosted Flutterwave checkout; only the
+      //    Flutterwave webhook may flip the order to 'paid'. The offline
+      //    sandbox simulates a settlement (no real money, no server). Non-card
+      //    rails stay pending.
+      const cardRail = isCardRail(paymentMethod);
 
-      if (cardRail && isStripeConfigured()) {
-        // Preferred: on-site Payment Element. Create the intent, then render the
-        // card form. Cart stays intact until payment succeeds.
-        const clientSecret = await createPaymentIntent(orderResult.id);
-        setStripePayment({ clientSecret, order: orderResult });
-        setIsSubmitting(false);
-        return; // hand off to the payment step
-      }
-
-      if (cardRail && isSupabaseConfigured()) {
-        // Fallback (Supabase live but no publishable key): hosted Stripe Checkout.
-        const checkoutUrl = await startStripeCheckout(orderResult.id);
+      if (cardRail && isCardPaymentConfigured()) {
+        const checkoutUrl = await startCardPayment(orderResult.id);
         window.location.href = checkoutUrl;
         return; // navigating away
       }
 
-      if (cardRail && !isSupabaseConfigured()) {
+      if (cardRail && !isCardPaymentConfigured()) {
         // Sandbox-only simulated settlement (clearly marked, not a real session).
         const confirmedOrder = await dbService.confirmPayment(
           orderResult.id,
@@ -139,52 +119,6 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
       setIsSubmitting(false);
     }
   };
-
-  // ON-SITE STRIPE PAYMENT STEP
-  if (stripePayment) {
-    const amountLabel = `$${stripePayment.order.total.toFixed(2)}`;
-    return (
-      <div className="max-w-lg mx-auto py-10 px-4 font-sans text-[#F8F3E9] selection:bg-[#9B6DFF] selection:text-[#0A0812]">
-        <div className="border-b border-[#2A1F45] pb-5 mb-6 text-center select-none">
-          <span className="text-[10px] font-body-mono text-[#B68D40] tracking-[0.3em] font-bold uppercase block mb-1">
-            CLEARING HOUSE // DESK 05
-          </span>
-          <h2 className="font-serif text-2xl tracking-wider uppercase font-semibold">
-            SETTLE TRANSACTION
-          </h2>
-          <span className="text-[10px] font-body-mono text-[#F8F3E9]/50 uppercase tracking-wider block mt-2">
-            Order Reference: {stripePayment.order.id}
-          </span>
-        </div>
-
-        <div className="bg-[#120F1E] border border-[#2A1F45] p-5">
-          <React.Suspense
-            fallback={
-              <div className="py-10 text-center font-body-mono text-xs uppercase tracking-widest text-[#9B6DFF] animate-pulse">
-                INITIALIZING SECURE PAYMENT MODULE...
-              </div>
-            }
-          >
-            <StripePaymentPanel
-              clientSecret={stripePayment.clientSecret}
-              amountLabel={amountLabel}
-              orderId={stripePayment.order.id}
-              onPaid={() => {
-                setCreatedOrder({
-                  ...stripePayment.order,
-                  payment_status: 'paid',
-                  order_status: 'processing',
-                });
-                setStripePayment(null);
-                onClearCart();
-              }}
-              onBack={() => setStripePayment(null)}
-            />
-          </React.Suspense>
-        </div>
-      </div>
-    );
-  }
 
   // SUCCESS STATE SCREEN RENDERING
   if (createdOrder) {
@@ -467,7 +401,7 @@ export const CheckoutView: React.FC<CheckoutViewProps> = ({
                 <span>
                   {isSubmitting
                     ? 'AUTHORIZING DISPATCH...'
-                    : isStripeRail(paymentMethod) && isStripeConfigured()
+                    : isCardRail(paymentMethod) && isCardPaymentConfigured()
                     ? 'PROCEED TO SECURE PAYMENT'
                     : 'CONFIRM CARGO DISPATCH AUTHORIZATION'}
                 </span>
